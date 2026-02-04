@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tesis_app/modules/login_without_qr/models/catalogue_response.dart';
 import '../helpers/global_helper.dart';
 import '../widgets/alert_template.dart';
 
@@ -16,9 +17,9 @@ class FunctionalProvider extends ChangeNotifier {
 
   String? lastQrValue;
 
-  bool isQrAuthorized = true;
-
   bool isFaceAuthorized = true;
+
+  List<CatalogueResponse> catalogue = [];
 
   void showAlert({
     required GlobalKey key,
@@ -108,15 +109,14 @@ class FunctionalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setQrAuthorized(bool value) {
-    if (isQrAuthorized == value) return;
-    isQrAuthorized = value;
-    notifyListeners();
-  }
-
   void setFaceAuthorized(bool value) {
     if (isFaceAuthorized == value) return;
     isFaceAuthorized = value;
+    notifyListeners();
+  }
+
+  void setCatalogue(List<CatalogueResponse> list) {
+    catalogue = list;
     notifyListeners();
   }
 }

@@ -78,7 +78,7 @@ class _LayoutState extends State<MainLayout> {
     );
 
     return InactivityGuard(
-      timeoutSeconds: 30,
+      timeoutSeconds: 3000,
       warningSeconds: 10,
       child: Stack(
         children: [

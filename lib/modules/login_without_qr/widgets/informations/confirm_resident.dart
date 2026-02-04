@@ -69,7 +69,7 @@ class ConfirmResident extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Manzana ${data.manzana} - Villa ${data.villa}',
+                          '${data.manzana} / ${data.villa}',
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
 import 'package:tesis_app/modules/login_without_qr/models/admission_request.dart';
+import 'package:tesis_app/modules/login_without_qr/models/id_result_model.dart';
 import 'package:tesis_app/modules/login_without_qr/models/resident_data.dart';
-import 'package:tesis_app/modules/login_without_qr/widgets/informations/information_id_widget.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/steps/capture_plate_page.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/steps/destination_page.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/steps/id_page.dart';
@@ -22,6 +22,7 @@ class IngresoQrFlowPage extends StatefulWidget {
 
 class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
   int _currentStep = 0;
+  String? _fotoCedulaBase64;
 
   final AdmissionRequestModel _request = AdmissionRequestModel();
 
@@ -64,8 +65,9 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
                           GlobalHelper.EntryMethodItem.none,
                         );
                       },
-                      onConfirmed: (IdParsedData data) {
-                        _request.idData = data;
+                      onConfirmed: (IdStepResult result) {
+                        _request.idData = result.data;
+                        _fotoCedulaBase64 = result.fotoCedulaBase64;
                         setState(() => _currentStep = 1);
                       },
                     );
@@ -74,12 +76,8 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
                   if (_currentStep == 1) {
                     return ValidationFacePage(
                       onBack: () => setState(() => _currentStep = 0),
-                      onFaceCaptured: (file) {
-                        debugPrint('PATH ROSTRO: ${file.path}');
-                      },
-                      onSuccessNext: () {
-                        setState(() => _currentStep = 2);
-                      },
+                      fotoCedulaBase64: _fotoCedulaBase64 ?? '',
+                      onSuccessNext: () => setState(() => _currentStep = 2),
                     );
                   }
 

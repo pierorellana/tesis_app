@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
+import 'package:tesis_app/modules/login_without_qr/models/catalogue_response.dart';
 import 'package:tesis_app/modules/login_without_qr/models/resident_data.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/informations/confirm_resident.dart';
+import 'package:tesis_app/shared/providers/functional_provider.dart';
 import 'package:tesis_app/shared/widgets/drop_down_button.dart';
 
 enum _DestinationUiState { form, confirm }
@@ -33,16 +36,28 @@ class _DestinationPageState extends State<DestinationPage> {
 
   ResidentFound? _found;
 
-  final List<String> _manzanas = const ['1', '2', '3', '4', '5'];
-  final List<String> _villas = const ['1', '2', '3', '4', '5', '12'];
-
   bool get _canSearch => _manzana != null && _villa != null;
+
+  List<String> _manzanasFromCatalogue(List<CatalogueResponse> cat) {
+    return cat.map((e) => e.manzana).toList()..sort();
+  }
+
+  List<String> _villasFromSelectedMZ(List<CatalogueResponse> cat, String? mz) {
+    if (mz == null) return const [];
+    final match = cat.where((e) => e.manzana == mz).toList();
+    if (match.isEmpty) return const [];
+    final villas = List<String>.from(match.first.villas);
+    villas.sort();
+    return villas;
+  }
 
   void _searchResident() {
     setState(() {
       _hasErrorManzana = _manzana == null;
       _hasErrorVilla = _villa == null;
     });
+
+    if (!_canSearch) return;
 
     final resident = ResidentFound(
       manzana: _manzana!,
@@ -65,6 +80,8 @@ class _DestinationPageState extends State<DestinationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final catalogue = context.watch<FunctionalProvider>().catalogue;
+
     if (_uiState == _DestinationUiState.confirm && _found != null) {
       return ConfirmResident(
         data: _found!,
@@ -72,6 +89,9 @@ class _DestinationPageState extends State<DestinationPage> {
         onChangeDestination: _changeDestination,
       );
     }
+
+    final manzanas = _manzanasFromCatalogue(catalogue);
+    final villas = _villasFromSelectedMZ(catalogue, _manzana);
 
     return Form(
       key: _formKey,
@@ -104,29 +124,25 @@ class _DestinationPageState extends State<DestinationPage> {
                 ),
                 const SizedBox(height: 8),
                 DropDownButtonWidget<String>(
-                  hint: 'Ej: 5',
+                  hint: 'Seleccione',
                   value: _manzana,
                   hasError: _hasErrorManzana,
-                  items: _manzanas
+                  items: manzanas
                       .map(
-                        (m) => DropdownMenuItem<String>(
-                          value: m,
-                          child: Text(m),
-                        ),
+                        (m) =>
+                            DropdownMenuItem<String>(value: m, child: Text(m)),
                       )
                       .toList(),
-                  // validator: (v) {
-                  //   if (v == null || (v.isEmpty)) {
-                  //     return 'Seleccione una manzana';
-                  //   }
-                  //   return null;
-                  // },
+                  // validator: (v) => (v == null || v.isEmpty)
+                  //     ? 'Seleccione una manzana'
+                  //     : null,
                   onChanged: (v) {
                     setState(() {
                       _manzana = v;
                       _hasErrorManzana = false;
+                      _villa = null;
+                      _hasErrorVilla = false;
                     });
-        
                     _formKey.currentState?.validate();
                   },
                 ),
@@ -141,31 +157,28 @@ class _DestinationPageState extends State<DestinationPage> {
                 ),
                 const SizedBox(height: 8),
                 DropDownButtonWidget<String>(
-                  hint: 'Ej: 12',
+                  hint: _manzana == null
+                      ? 'Seleccione manzana primero'
+                      : 'Seleccione',
                   value: _villa,
                   hasError: _hasErrorVilla,
-                  items: _villas
+                  items: villas
                       .map(
-                        (v) => DropdownMenuItem<String>(
-                          value: v,
-                          child: Text(v),
-                        ),
+                        (v) =>
+                            DropdownMenuItem<String>(value: v, child: Text(v)),
                       )
                       .toList(),
-                  // validator: (v) {
-                  //   if (v == null || (v.isEmpty)) {
-                  //     return 'Seleccione una villa';
-                  //   }
-                  //   return null;
-                  // },
-                  onChanged: (v) {
-                    setState(() {
-                      _villa = v;
-                      _hasErrorVilla = false;
-                    });
-        
-                    _formKey.currentState?.validate();
-                  },
+                  // validator: (v) =>
+                  //     (v == null || v.isEmpty) ? 'Seleccione una villa' : null,
+                  onChanged: (_manzana == null)
+                      ? null
+                      : (v) {
+                          setState(() {
+                            _villa = v;
+                            _hasErrorVilla = false;
+                          });
+                          _formKey.currentState?.validate();
+                        },
                 ),
               ],
             ),
@@ -187,8 +200,9 @@ class _DestinationPageState extends State<DestinationPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppTheme.primaryColor
-                        .withOpacity(0.35),
+                    disabledBackgroundColor: AppTheme.primaryColor.withOpacity(
+                      0.35,
+                    ),
                     disabledForegroundColor: Colors.white.withOpacity(0.85),
                     elevation: 0,
                     shape: RoundedRectangleBorder(

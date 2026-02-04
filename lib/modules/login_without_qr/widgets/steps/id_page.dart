@@ -1,18 +1,19 @@
-import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
+import 'package:tesis_app/modules/login_without_qr/models/cedula_response.dart';
+import 'package:tesis_app/modules/login_without_qr/models/id_result_model.dart';
+import 'package:tesis_app/modules/login_without_qr/services/ocr_cedula_service.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/cards/card_camera_widget.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/informations/information_id_widget.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/loadings/reading_id_widget.dart';
-import 'package:tesis_app/shared/helpers/global_helper.dart';
 import 'package:tesis_app/shared/helpers/global_helper.dart' as GlobalHelper;
 
 class IdPage extends StatefulWidget {
   const IdPage({super.key, required this.onBack, required this.onConfirmed});
 
   final VoidCallback onBack;
-  final void Function(IdParsedData data) onConfirmed;
+  final void Function(IdStepResult result) onConfirmed;
 
   @override
   State<IdPage> createState() => _IdPageState();
@@ -21,10 +22,10 @@ class IdPage extends StatefulWidget {
 class _IdPageState extends State<IdPage> {
   late final IdCardCameraController _cameraController;
 
-  GlobalHelper.IdUiState _uiState = IdUiState.camera;
-  XFile? lastPhoto;
-  Timer? _timer;
+  GlobalHelper.IdUiState _uiState = GlobalHelper.IdUiState.camera;
 
+  final OcrCedulaService _cedulaService = OcrCedulaService();
+  CedulaResponse? _cedula;
   IdParsedData? _parsed;
 
   @override
@@ -35,52 +36,58 @@ class _IdPageState extends State<IdPage> {
 
   @override
   void dispose() {
-    _timer?.cancel();
     _cameraController.dispose();
     super.dispose();
   }
 
-  Future<void> _capture() async {
-    await _cameraController.takePhoto();
-  }
-
-  void _onCaptured(XFile file) {
-    debugPrint('FOTO CEDULA: ${file.path}');
-    lastPhoto = file;
-
+  Future<void> _onCaptured(XFile file) async {
     setState(() {
-      _uiState = IdUiState.reading;
+      _uiState = GlobalHelper.IdUiState.reading;
       _parsed = null;
+      _cedula = null;
     });
 
-    _timer?.cancel();
-    _timer = Timer(const Duration(seconds: 4), () {
-      if (!mounted) return;
+    final CedulaResponse? ced = await _getInfoCedula(file);
+
+    if (!mounted) return;
+
+    if (ced != null) {
+      final parsed = IdParsedData(
+        names: '-',
+        surnames: ced.nombres,
+        identification: ced.cedula,
+      );
 
       setState(() {
-        _parsed = const IdParsedData(
-          names: 'PIERRE ALEXANDER',
-          surnames: 'ORELLANA DELGADO',
-          identification: '0945678767',
-        );
-
-        _uiState = IdUiState.confirm;
+        _cedula = ced;
+        _parsed = parsed;
+        _uiState = GlobalHelper.IdUiState.confirm;
       });
-    });
+    } else {
+      setState(() => _uiState = GlobalHelper.IdUiState.camera);
+    }
   }
 
-  void _retryPhoto() {
-    _timer?.cancel();
+  Future<CedulaResponse?> _getInfoCedula(XFile file) async {
+    final response = await _cedulaService.getCedula(context, file: file);
+
+    if (!response.error && response.data != null) {
+      return response.data;
+    }
+
+    return null;
+  }
+
+  void _retry() {
     setState(() {
-      _uiState = IdUiState.camera;
+      _uiState = GlobalHelper.IdUiState.camera;
       _parsed = null;
-      lastPhoto = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_uiState == IdUiState.camera) {
+    if (_uiState == GlobalHelper.IdUiState.camera) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -97,6 +104,7 @@ class _IdPageState extends State<IdPage> {
           const SizedBox(height: 18),
           IdCardCameraWidget(
             controller: _cameraController,
+            autoCapture: true,
             onCaptured: _onCaptured,
           ),
           const SizedBox(height: 18),
@@ -118,55 +126,29 @@ class _IdPageState extends State<IdPage> {
             ),
           ),
           const SizedBox(height: 22),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 160,
-                height: 58,
-                child: ElevatedButton.icon(
-                  onPressed: _capture,
-                  icon: const Icon(Icons.description_outlined),
-                  label: const Text(
-                    'Capturar',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+          SizedBox(
+            width: 140,
+            height: 58,
+            child: OutlinedButton(
+              onPressed: widget.onBack,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.dark,
+                side: const BorderSide(color: Color(0xFFD7DEE8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              const SizedBox(width: 15),
-              SizedBox(
-                width: 140,
-                height: 58,
-                child: OutlinedButton(
-                  onPressed: widget.onBack,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.dark,
-                    side: const BorderSide(color: Color(0xFFD7DEE8)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    'Volver',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
+              child: const Text(
+                'Volver',
+                style: TextStyle(fontWeight: FontWeight.w800),
               ),
-            ],
+            ),
           ),
         ],
       );
     }
 
-    if (_uiState == IdUiState.reading) {
+    if (_uiState == GlobalHelper.IdUiState.reading) {
       return const ReadingIdInfoWidget();
     }
 
@@ -175,9 +157,16 @@ class _IdPageState extends State<IdPage> {
           _parsed ??
           const IdParsedData(names: '-', surnames: '-', identification: '-'),
       onConfirm: () {
-        widget.onConfirmed(_parsed!);
+        final ced = _cedula;
+        final parsed = _parsed;
+
+        if (ced == null || parsed == null) return;
+
+        widget.onConfirmed(
+          IdStepResult(data: parsed, fotoCedulaBase64: ced.fotoBase64),
+        );
       },
-      onRetry: _retryPhoto,
+      onRetry: _retry,
     );
   }
 }

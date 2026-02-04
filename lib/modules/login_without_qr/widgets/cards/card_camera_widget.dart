@@ -1,21 +1,22 @@
+import 'dart:async';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
 
 class IdCardCameraController {
   Future<void> Function()? _takePhoto;
   bool _disposed = false;
 
-  void _bind({
-    required Future<void> Function() takePhoto,
-  }) {
+  void _bind({required Future<void> Function() takePhoto}) {
     _takePhoto = takePhoto;
   }
 
   Future<void> takePhoto() async {
     if (_disposed) return;
     final fn = _takePhoto;
-    if (fn == null) return; 
+    if (fn == null) return;
     await fn();
   }
 
@@ -31,13 +32,11 @@ class IdCardCameraWidget extends StatefulWidget {
     required this.controller,
     required this.onCaptured,
     this.autoCapture = false,
-    this.onBack,
   });
 
   final IdCardCameraController controller;
   final ValueChanged<XFile> onCaptured;
   final bool autoCapture;
-  final VoidCallback? onBack;
 
   @override
   State<IdCardCameraWidget> createState() => _IdCardCameraWidgetState();
@@ -48,10 +47,17 @@ class _IdCardCameraWidgetState extends State<IdCardCameraWidget> {
   bool _isTaking = false;
   bool _initialized = false;
 
+  late final TextRecognizer _textRecognizer;
+  bool _streaming = false;
+  bool _autoCaptured = false;
+  DateTime _lastProcess = DateTime.fromMillisecondsSinceEpoch(0);
+  int _stableHits = 0;
+
   @override
   void initState() {
     super.initState();
     widget.controller._bind(takePhoto: takePhoto);
+    _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
     _initCamera();
   }
 
@@ -73,7 +79,7 @@ class _IdCardCameraWidgetState extends State<IdCardCameraWidget> {
 
       final controller = CameraController(
         back,
-        ResolutionPreset.high,
+        ResolutionPreset.max,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
@@ -86,8 +92,102 @@ class _IdCardCameraWidgetState extends State<IdCardCameraWidget> {
         _initialized = true;
       });
 
+      if (widget.autoCapture) {
+        await _startAutoCaptureStream();
+      }
     } catch (e) {
       debugPrint('Error init camera: $e');
+    }
+  }
+
+  Future<void> _startAutoCaptureStream() async {
+    final cam = _cam;
+    if (cam == null || _streaming || _autoCaptured) return;
+
+    _streaming = true;
+
+    await cam.startImageStream((CameraImage image) async {
+      if (!mounted || _autoCaptured) return;
+
+      final now = DateTime.now();
+      if (now.difference(_lastProcess).inMilliseconds < 300) return;
+      _lastProcess = now;
+
+      final inputImage = _cameraImageToInputImage(image, cam.description);
+      if (inputImage == null) return;
+
+      try {
+        final recognized = await _textRecognizer.processImage(inputImage);
+        final ok = _looksLikeCedula(recognized.text);
+
+        if (ok) {
+          _stableHits++;
+        } else {
+          _stableHits = 0;
+        }
+
+        if (_stableHits >= 4) {
+          _autoCaptured = true;
+          await _stopStreamSafe();
+          await takePhoto();
+        }
+      } catch (_) {
+        // ignorar frame malo
+      }
+    });
+  }
+
+  Future<void> _stopStreamSafe() async {
+    final cam = _cam;
+    if (cam == null) return;
+    if (!_streaming) return;
+
+    try {
+      await cam.stopImageStream();
+    } catch (_) {}
+    _streaming = false;
+  }
+
+  bool _looksLikeCedula(String text) {
+    final t = text.toUpperCase();
+
+    final hasCedulaDigits = RegExp(r'\b\d{10}\b').hasMatch(t);
+
+    final hasKeywords =
+        t.contains('REPUBLICA') ||
+        t.contains('IDENTIDAD') ||
+        t.contains('CEDULA');
+
+    return hasCedulaDigits || hasKeywords;
+  }
+
+  InputImage? _cameraImageToInputImage(
+    CameraImage image,
+    CameraDescription desc,
+  ) {
+    try {
+      final WriteBuffer allBytes = WriteBuffer();
+      for (final Plane plane in image.planes) {
+        allBytes.putUint8List(plane.bytes);
+      }
+      final bytes = allBytes.done().buffer.asUint8List();
+
+      final rotation = InputImageRotationValue.fromRawValue(
+        desc.sensorOrientation,
+      );
+      final format = InputImageFormatValue.fromRawValue(image.format.raw);
+      if (rotation == null || format == null) return null;
+
+      final metadata = InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: format,
+        bytesPerRow: image.planes.first.bytesPerRow,
+      );
+
+      return InputImage.fromBytes(bytes: bytes, metadata: metadata);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -97,6 +197,8 @@ class _IdCardCameraWidgetState extends State<IdCardCameraWidget> {
 
     setState(() => _isTaking = true);
     try {
+      await _stopStreamSafe();
+
       final file = await _cam!.takePicture();
       widget.onCaptured(file);
     } catch (e) {
@@ -108,6 +210,8 @@ class _IdCardCameraWidgetState extends State<IdCardCameraWidget> {
 
   @override
   void dispose() {
+    _stopStreamSafe();
+    _textRecognizer.close();
     _cam?.dispose();
     super.dispose();
   }
@@ -151,7 +255,7 @@ class _IdCardCameraWidgetState extends State<IdCardCameraWidget> {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: const Color(0xFFF2F5FA),
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                         child: Icon(
                           Icons.photo_camera_outlined,
@@ -251,7 +355,6 @@ class _FramePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _FramePainter oldDelegate) {
-    return oldDelegate.color != color;
-  }
+  bool shouldRepaint(covariant _FramePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
