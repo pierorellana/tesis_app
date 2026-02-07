@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:tesis_app/modules/login_without_qr/models/cedula_response.dart';

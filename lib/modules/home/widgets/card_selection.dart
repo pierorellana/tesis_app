@@ -8,18 +8,30 @@ class OptionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.width,
+    this.height,
+    this.iconSize,
+    this.titleSize,
+    this.subtitleSize,
+    this.padding,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final double? width;
+  final double? height;
+  final double? iconSize;
+  final double? titleSize;
+  final double? subtitleSize;
+  final EdgeInsets? padding;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 310,
-      height: 250,
+      width: width ?? 310,
+      height: height ?? 250,
       child: Material(
         color: AppTheme.white,
         borderRadius: BorderRadius.circular(16),
@@ -31,16 +43,22 @@ class OptionCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.lightGrey),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+            padding:
+                padding ??
+                const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 60, color: AppTheme.primaryColor),
+                Icon(
+                  icon,
+                  size: iconSize ?? 60,
+                  color: AppTheme.primaryColor,
+                ),
                 const SizedBox(height: 18),
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 22,
+                  style: TextStyle(
+                    fontSize: titleSize ?? 22,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.dark,
                     height: 1.1,
@@ -50,7 +68,7 @@ class OptionCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: subtitleSize ?? 14,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.hinText,
                   ),

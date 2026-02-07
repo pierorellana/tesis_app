@@ -5,9 +5,20 @@ import 'package:tesis_app/env/theme/app_theme.dart';
 import 'package:tesis_app/shared/providers/functional_provider.dart';
 
 class QrCodeWidget extends StatefulWidget {
-  const QrCodeWidget({super.key, this.onQrDetected});
+  const QrCodeWidget({
+    super.key,
+    this.onQrDetected,
+    this.width,
+    this.height,
+    this.padding,
+    this.framePadding,
+  });
 
   final ValueChanged<String>? onQrDetected;
+  final double? width;
+  final double? height;
+  final EdgeInsets? padding;
+  final EdgeInsets? framePadding;
 
   @override
   State<QrCodeWidget> createState() => _QrCodeWidgetState();
@@ -50,13 +61,18 @@ class _QrCodeWidgetState extends State<QrCodeWidget>
     final size = MediaQuery.of(context).size;
     final fp = context.read<FunctionalProvider>();
 
-    final double cardWidth = (size.width * 0.36).clamp(520.0, 720.0);
-    final double cardHeight = (size.height * 0.52).clamp(330.0, 460.0);
+    final double cardWidth =
+        widget.width ?? (size.width * 0.36).clamp(520.0, 720.0);
+    final double cardHeight =
+        widget.height ?? (size.height * 0.52).clamp(330.0, 460.0);
+    final outerPadding = widget.padding ?? const EdgeInsets.all(18);
+    final innerPadding = widget.framePadding ?? const EdgeInsets.all(22);
+    final innerPadH = innerPadding.horizontal / 2;
 
     return Container(
       width: cardWidth,
       height: cardHeight,
-      padding: const EdgeInsets.all(18),
+      padding: outerPadding,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -67,7 +83,7 @@ class _QrCodeWidgetState extends State<QrCodeWidget>
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.all(22),
+              padding: innerPadding,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
                 child: MobileScanner(
@@ -90,18 +106,19 @@ class _QrCodeWidgetState extends State<QrCodeWidget>
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(22),
+              padding: innerPadding,
               child: CustomPaint(
                 painter: _QrFramePainter(color: AppTheme.primaryColor),
                 child: const SizedBox.expand(),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(22),
+              padding: innerPadding,
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  const topPadding = 20.0;
-                  const bottomPadding = 20.0;
+                  final inset = (innerPadH - 2).clamp(16.0, 28.0);
+                  final topPadding = inset;
+                  final bottomPadding = inset;
 
                   final maxDy =
                       (constraints.maxHeight - topPadding - bottomPadding)
