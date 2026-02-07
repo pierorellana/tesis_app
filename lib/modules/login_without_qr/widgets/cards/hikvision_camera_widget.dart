@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:math';
 
 import 'package:camera/camera.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:http/http.dart' as http;
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
 
@@ -20,14 +20,12 @@ class HikvisionCameraConfig {
     this.snapshotUrl,
     this.username,
     this.password,
-    this.preferSnapshotPreview = false,
   });
 
   final String rtspUrl;
   final String? snapshotUrl;
   final String? username;
   final String? password;
-  final bool preferSnapshotPreview;
 
   bool get isValid => rtspUrl.trim().isNotEmpty;
 
@@ -96,11 +94,17 @@ class HikvisionCameraWidget extends StatefulWidget {
 }
 
 class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
-  VlcPlayerController? _vlc;
+  Player? _player;
+  VideoController? _videoController;
+  StreamSubscription<dynamic>? _playerErrorSub;
+  StreamSubscription<VideoParams>? _rtspParamsSub;
+  Timer? _rtspTimeout;
+  List<String> _rtspCandidates = const [];
+  int _rtspCandidateIndex = 0;
+  bool _rtspConnected = false;
   late final TextRecognizer _textRecognizer;
 
   bool _isTaking = false;
-  bool _initialized = false;
   String? _errorMessage;
 
   Timer? _autoTimer;
@@ -110,12 +114,8 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   int _stableHits = 0;
   Directory? _tempDir;
 
-  Timer? _previewTimer;
-  Uint8List? _previewBytes;
   Uint8List? _snapshotCache;
   DateTime _snapshotCacheAt = DateTime.fromMillisecondsSinceEpoch(0);
-  late final bool _useSnapshotPreview;
-  String? _snapshotError;
   Map<String, String>? _digestChallenge;
   int _digestNc = 0;
   final Random _rng = Random();
@@ -127,22 +127,7 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
     widget.controller._bind(takePhoto: takePhoto);
     _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
-    _useSnapshotPreview =
-        widget.config.preferSnapshotPreview &&
-        (widget.config.snapshotUrl?.trim().isNotEmpty ?? false);
-
-    if (!_useSnapshotPreview) {
-      _vlc = VlcPlayerController.network(
-        widget.config.resolvedRtspUrl,
-        autoPlay: true,
-        hwAcc: HwAcc.auto,
-        options: VlcPlayerOptions(
-          rtp: VlcRtpOptions([VlcRtpOptions.rtpOverRtsp(true)]),
-        ),
-      )..addListener(_onVlcChanged);
-    } else {
-      _startSnapshotPreview();
-    }
+    _startRtspPreview();
 
     if (widget.autoCapture) {
       _startAutoCapture();
@@ -164,21 +149,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
     }
   }
 
-  void _onVlcChanged() {
-    final vlc = _vlc;
-    if (vlc == null) return;
-    if (!mounted) return;
-    final value = vlc.value;
-    final hasError = value.hasError;
-    final nextError = hasError ? value.errorDescription : null;
-    if (_initialized != value.isInitialized || _errorMessage != nextError) {
-      setState(() {
-        _initialized = value.isInitialized;
-        _errorMessage = nextError;
-      });
-    }
-  }
-
   void _startAutoCapture() {
     if (_autoTimer != null) return;
     _autoTimer = Timer.periodic(
@@ -192,27 +162,133 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
     _autoTimer = null;
   }
 
-  void _startSnapshotPreview() {
-    if (_previewTimer != null) return;
-    _previewTimer = Timer.periodic(
-      const Duration(milliseconds: 800),
-      (_) => _refreshSnapshotPreview(),
+  void _startRtspPreview() {
+    _rtspCandidates = _buildRtspCandidates();
+    _rtspCandidateIndex = 0;
+    _rtspConnected = false;
+
+    if (_rtspCandidates.isEmpty) {
+      _errorMessage = 'RTSP URL vacía';
+      return;
+    }
+
+    _player = Player(
+      configuration: const PlayerConfiguration(
+        muted: true,
+        bufferSize: 2 * 1024 * 1024,
+        protocolWhitelist: [
+          'udp',
+          'rtp',
+          'rtsp',
+          'tcp',
+          'tls',
+          'data',
+          'file',
+          'http',
+          'https',
+          'crypto',
+        ],
+      ),
     );
+    _videoController = VideoController(_player!);
+
+    _playerErrorSub = _player!.stream.error.listen(_handleRtspError);
+    _rtspParamsSub = _player!.stream.videoParams.listen(_handleRtspParams);
+
+    _openNextRtspCandidate();
   }
 
-  void _stopSnapshotPreview() {
-    _previewTimer?.cancel();
-    _previewTimer = null;
+  void _handleRtspError(dynamic error) {
+    debugPrint('Hikvision RTSP error: $error');
+    if (!mounted) return;
+    setState(() => _errorMessage = error?.toString());
+    if (_rtspConnected) return;
+    _rtspTimeout?.cancel();
+    _rtspTimeout = Timer(const Duration(seconds: 2), _openNextRtspCandidate);
   }
 
-  Future<void> _refreshSnapshotPreview() async {
+  void _handleRtspParams(VideoParams params) {
+    final width = params.w ?? params.dw ?? 0;
+    final height = params.h ?? params.dh ?? 0;
+    if (width <= 0 || height <= 0) return;
+    _rtspConnected = true;
+    _rtspTimeout?.cancel();
     if (!mounted) return;
-    final bytes = await _getSnapshotBytes();
-    if (bytes == null || bytes.isEmpty) return;
-    if (!mounted) return;
-    setState(() {
-      _previewBytes = bytes;
+    if (_errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
+  }
+
+  void _openNextRtspCandidate() {
+    if (_player == null) return;
+    if (_rtspCandidateIndex >= _rtspCandidates.length) {
+      if (mounted && _errorMessage == null) {
+        setState(() => _errorMessage = 'Sin conexión RTSP');
+      }
+      return;
+    }
+
+    final url = _rtspCandidates[_rtspCandidateIndex++];
+    _rtspConnected = false;
+    if (mounted && _errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
+    debugPrint('Hikvision RTSP intentando: $url');
+
+    _player!.open(Media(url), play: true);
+    _rtspTimeout?.cancel();
+    _rtspTimeout = Timer(const Duration(seconds: 6), () {
+      if (!_rtspConnected) {
+        _openNextRtspCandidate();
+      }
     });
+  }
+
+  List<String> _buildRtspCandidates() {
+    final raw = widget.config.resolvedRtspUrl.trim();
+    if (raw.isEmpty) return const [];
+    final uri = Uri.tryParse(raw);
+    if (uri == null) return [raw];
+
+    final candidates = <Uri>[];
+    void add(Uri u) {
+      if (!candidates.any((c) => c.toString() == u.toString())) {
+        candidates.add(u);
+      }
+    }
+
+    add(uri);
+
+    final hasPort = uri.hasPort && uri.port > 0;
+    if (!hasPort || uri.port == 80) {
+      add(uri.replace(port: 554));
+    }
+
+    if (uri.path.contains('/101')) {
+      final altPath = uri.path.replaceFirst('/101', '/102');
+      if (altPath != uri.path) {
+        add(uri.replace(path: altPath));
+        if (!hasPort || uri.port == 80) {
+          add(uri.replace(path: altPath, port: 554));
+        }
+      }
+    }
+
+    final ordered = <String>[];
+    final seen = <String>{};
+    for (final u in candidates) {
+      final base = u.toString();
+      if (seen.add(base)) ordered.add(base);
+
+      if (!u.queryParameters.containsKey('rtsp_transport')) {
+        final params = Map<String, String>.from(u.queryParameters);
+        params['rtsp_transport'] = 'tcp';
+        final tcpUrl = u.replace(queryParameters: params).toString();
+        if (seen.add(tcpUrl)) ordered.add(tcpUrl);
+      }
+    }
+
+    return ordered;
   }
 
   Future<void> _processAutoFrame() async {
@@ -226,7 +302,10 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
       final bytes = await _fetchFrameBytes();
       if (bytes == null || bytes.isEmpty) return;
 
-      final input = await _inputImageFromBytes(bytes, filename: 'hik_frame.jpg');
+      final input = await _inputImageFromBytes(
+        bytes,
+        filename: 'hik_frame.jpg',
+      );
       if (input == null) return;
 
       final recognized = await _textRecognizer.processImage(input);
@@ -269,15 +348,7 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
       final bytes = await _getSnapshotBytes();
       if (bytes != null && bytes.isNotEmpty) return bytes;
     }
-
-    if (_useSnapshotPreview) return null;
-    final vlc = _vlc;
-    if (vlc == null || !vlc.value.isInitialized) return null;
-    try {
-      return await vlc.takeSnapshot();
-    } catch (_) {
-      return null;
-    }
+    return null;
   }
 
   Future<Uint8List?> _getSnapshotBytes() async {
@@ -308,7 +379,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
             .get(uri, headers: {'Authorization': digestAuth})
             .timeout(const Duration(seconds: 4));
         if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          _setSnapshotError(null);
           return resp.bodyBytes;
         }
         if (resp.statusCode == 401) {
@@ -320,7 +390,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
                 .get(uri, headers: {'Authorization': retryAuth})
                 .timeout(const Duration(seconds: 4));
             if (resp2.statusCode >= 200 && resp2.statusCode < 300) {
-              _setSnapshotError(null);
               return resp2.bodyBytes;
             }
           }
@@ -332,7 +401,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
           .get(uri, headers: baseHeaders.isNotEmpty ? baseHeaders : null)
           .timeout(const Duration(seconds: 4));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        _setSnapshotError(null);
         return resp.bodyBytes;
       }
       if (resp.statusCode == 401) {
@@ -343,23 +411,20 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
               .get(uri, headers: {'Authorization': auth})
               .timeout(const Duration(seconds: 4));
           if (resp2.statusCode >= 200 && resp2.statusCode < 300) {
-            _setSnapshotError(null);
             return resp2.bodyBytes;
           }
-          _setSnapshotError('Snapshot 401');
+          debugPrint('Hikvision snapshot 401');
           return null;
         }
-        _setSnapshotError('Snapshot 401 (digest build)');
+        debugPrint('Hikvision snapshot 401 (digest build)');
         return null;
       }
-      _setSnapshotError('Snapshot ${resp.statusCode}');
+      debugPrint('Hikvision snapshot ${resp.statusCode}');
       return null;
     } on TimeoutException catch (_) {
-      _setSnapshotError('Snapshot timeout');
       debugPrint('Hikvision snapshot timeout');
       return null;
     } catch (e, st) {
-      _setSnapshotError(_shortSnapshotError(e));
       debugPrint('Hikvision snapshot error: $e');
       debugPrintStack(stackTrace: st);
       return null;
@@ -427,10 +492,15 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   @override
   void dispose() {
     _stopAutoCapture();
-    _stopSnapshotPreview();
     _textRecognizer.close();
-    _vlc?.removeListener(_onVlcChanged);
-    _vlc?.dispose();
+    _rtspTimeout?.cancel();
+    _rtspTimeout = null;
+    _playerErrorSub?.cancel();
+    _playerErrorSub = null;
+    _rtspParamsSub?.cancel();
+    _rtspParamsSub = null;
+    _videoController = null;
+    _player?.dispose();
     super.dispose();
   }
 
@@ -472,18 +542,9 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
                   borderRadius: BorderRadius.circular(18),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final aspect =
-                          constraints.maxWidth / constraints.maxHeight;
-                      if (_useSnapshotPreview) {
-                        return _buildSnapshotPreview();
-                      }
-                      final vlc = _vlc;
-                      if (vlc == null) return _buildPlaceholder();
-                      return VlcPlayer(
-                        controller: vlc,
-                        aspectRatio: aspect,
-                        placeholder: _buildPlaceholder(),
-                      );
+                      final controller = _videoController;
+                      if (controller == null) return _buildPlaceholder();
+                      return Video(controller: controller, fit: BoxFit.cover);
                     },
                   ),
                 ),
@@ -505,24 +566,9 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
                   alignment: Alignment.center,
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'No se pudo conectar a la camara',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.95),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            if (_snapshotError != null)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black.withOpacity(0.25),
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    _snapshotError!,
+                    kDebugMode && _errorMessage != null
+                        ? 'No se pudo conectar a la camara\n$_errorMessage'
+                        : 'No se pudo conectar a la camara',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.95),
@@ -551,7 +597,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   }
 
   Widget _buildPlaceholder() {
-    if (_initialized) return const SizedBox.shrink();
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -564,31 +609,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
         color: AppTheme.hinText.withOpacity(0.6),
       ),
     );
-  }
-
-  Widget _buildSnapshotPreview() {
-    final bytes = _previewBytes;
-    if (bytes == null || bytes.isEmpty) {
-      return _buildPlaceholder();
-    }
-    return Image.memory(
-      bytes,
-      fit: BoxFit.cover,
-      gaplessPlayback: true,
-      filterQuality: FilterQuality.low,
-    );
-  }
-
-  void _setSnapshotError(String? message) {
-    if (!mounted) return;
-    if (_snapshotError == message) return;
-    setState(() => _snapshotError = message);
-  }
-
-  String _shortSnapshotError(Object e) {
-    if (e is SocketException) return 'Snapshot socket error';
-    if (e is HttpException) return 'Snapshot http error';
-    return 'Snapshot error: ${e.runtimeType}';
   }
 
   Map<String, String> _parseDigestChallenge(String header) {
@@ -662,8 +682,7 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
     String? qopValue;
 
     if (qop != null && qop.isNotEmpty) {
-      final qops =
-          qop.split(',').map((e) => e.trim().toLowerCase()).toList();
+      final qops = qop.split(',').map((e) => e.trim().toLowerCase()).toList();
       qopValue = qops.contains('auth') ? 'auth' : qops.first;
       _digestNc += 1;
       nc = _digestNc.toString().padLeft(8, '0');

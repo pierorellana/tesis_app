@@ -41,9 +41,6 @@ class _IdPageState extends State<IdPage> {
       snapshotUrl: dotenv.env['HIKVISION_SNAPSHOT_URL'],
       username: dotenv.env['HIKVISION_USER'],
       password: dotenv.env['HIKVISION_PASS'],
-      preferSnapshotPreview:
-          (dotenv.env['HIKVISION_PREVIEW_MODE'] ?? '').toLowerCase() ==
-          'snapshot',
     );
   }
 
