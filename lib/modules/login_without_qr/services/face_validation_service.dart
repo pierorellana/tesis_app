@@ -8,17 +8,16 @@ import 'package:tesis_app/shared/services/http_interceptor.dart';
 class FaceValidationService {
   InterceptorHttp interceptorHttp = InterceptorHttp();
 
-   Future<GeneralResponse<FaceValidationResponse>> getFace(BuildContext context,  {required Map<String, dynamic> queryParameters}) async {
+  Future<GeneralResponse<FaceValidationResponse>> getFace(BuildContext context, {required Map<String, dynamic> payload}) async {
     try {
       final url = 'ocr/face-compare';
 
-      GeneralResponse response = await interceptorHttp.request(context, 'POST', url, null, queryParameters:queryParameters, showLoading: false);
-      if(!response.error){
+      GeneralResponse response = await interceptorHttp.request(context, 'POST', url, payload, showLoading: false);
+      if (!response.error) {
         return GeneralResponse(message: response.message, error: response.error, data: faceValidationResponseFromJson(jsonEncode(response.data)));
-      }else{
+      } else {
         return GeneralResponse(message: response.message, error: response.error);
       }
-
     } catch (error) {
       GlobalHelper.logger.e('error en metodo de getFace: $error');
       return GeneralResponse(message: 'Ocurrió, intentelo de nuevo.', error: true);

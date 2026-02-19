@@ -103,7 +103,7 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
                   if (_currentStep == 4) {
                     return ResidentCallPage(
                       callSeconds: 10,
-                      simulationAttempt1: CallSimResult.rejected,
+                      simulationAttempt1: CallSimResult.noAnswer,
                       simulationAttempt2: CallSimResult.authorized,
                       onGoNextStep: () => setState(() => _currentStep = 5),
                     );

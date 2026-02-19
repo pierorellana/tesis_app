@@ -13,62 +13,10 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
+import 'package:tesis_app/modules/login_without_qr/widgets/cards/hikvision_camera_widget.dart';
 
-class HikvisionCameraConfig {
-  const HikvisionCameraConfig({
-    required this.rtspUrl,
-    this.snapshotUrl,
-    this.username,
-    this.password,
-  });
-
-  final String rtspUrl;
-  final String? snapshotUrl;
-  final String? username;
-  final String? password;
-
-  bool get isValid => rtspUrl.trim().isNotEmpty;
-
-  String get resolvedRtspUrl {
-    final uri = Uri.tryParse(rtspUrl);
-    if (uri == null) return rtspUrl;
-    if (uri.userInfo.isNotEmpty) return rtspUrl;
-    if (username == null || password == null) return rtspUrl;
-    final userInfo =
-        '${Uri.encodeComponent(username!)}:${Uri.encodeComponent(password!)}';
-    return uri.replace(userInfo: userInfo).toString();
-  }
-
-  Map<String, String> get snapshotHeaders {
-    if (username == null || password == null) return const {};
-    final token = base64Encode(utf8.encode('$username:$password'));
-    return {'Authorization': 'Basic $token'};
-  }
-}
-
-class HikvisionCameraController {
-  Future<void> Function()? _takePhoto;
-  bool _disposed = false;
-
-  void bind({required Future<void> Function() takePhoto}) {
-    _takePhoto = takePhoto;
-  }
-
-  Future<void> takePhoto() async {
-    if (_disposed) return;
-    final fn = _takePhoto;
-    if (fn == null) return;
-    await fn();
-  }
-
-  void dispose() {
-    _disposed = true;
-    _takePhoto = null;
-  }
-}
-
-class HikvisionCameraWidget extends StatefulWidget {
-  const HikvisionCameraWidget({
+class HikvisionPlateCameraWidget extends StatefulWidget {
+  const HikvisionPlateCameraWidget({
     super.key,
     required this.controller,
     required this.config,
@@ -90,10 +38,12 @@ class HikvisionCameraWidget extends StatefulWidget {
   final EdgeInsets? framePadding;
 
   @override
-  State<HikvisionCameraWidget> createState() => _HikvisionCameraWidgetState();
+  State<HikvisionPlateCameraWidget> createState() =>
+      _HikvisionPlateCameraWidgetState();
 }
 
-class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
+class _HikvisionPlateCameraWidgetState
+    extends State<HikvisionPlateCameraWidget> {
   Player? _player;
   VideoController? _videoController;
   StreamSubscription<dynamic>? _playerErrorSub;
@@ -135,7 +85,7 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   }
 
   @override
-  void didUpdateWidget(covariant HikvisionCameraWidget oldWidget) {
+  void didUpdateWidget(covariant HikvisionPlateCameraWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       widget.controller.bind(takePhoto: takePhoto);
@@ -304,12 +254,12 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
 
       final input = await _inputImageFromBytes(
         bytes,
-        filename: 'hik_frame.jpg',
+        filename: 'plate_frame.jpg',
       );
       if (input == null) return;
 
       final recognized = await _textRecognizer.processImage(input);
-      final ok = _looksLikeCedula(recognized.text);
+      final ok = _looksLikePlate(recognized.text);
 
       if (ok) {
         _stableHits++;
@@ -329,17 +279,17 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
     }
   }
 
-  bool _looksLikeCedula(String text) {
-    final t = text.toUpperCase();
+  bool _looksLikePlate(String text) {
+    final upper = text.toUpperCase();
+    final normalized = upper.replaceAll(RegExp(r'[^A-Z0-9]'), '');
 
-    final hasCedulaDigits = RegExp(r'\\b\\d{10}\\b').hasMatch(t);
+    final ecuadorLike = RegExp(r'[A-Z]{3}\d{3,4}').hasMatch(normalized);
+    if (ecuadorLike) return true;
 
-    final hasKeywords =
-        t.contains('REPUBLICA') ||
-        t.contains('IDENTIDAD') ||
-        t.contains('CEDULA');
+    final shortFormat = RegExp(r'[A-Z]{2}\d{4}').hasMatch(normalized);
+    if (shortFormat) return true;
 
-    return hasCedulaDigits || hasKeywords;
+    return RegExp(r'\b[A-Z]{2,3}\s*-?\s*\d{3,4}\b').hasMatch(upper);
   }
 
   Future<Uint8List?> _fetchFrameBytes() async {
@@ -372,7 +322,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
       final uri = Uri.parse(url);
       final baseHeaders = widget.config.snapshotHeaders;
 
-      // 1) Try Digest first if we already have a challenge.
       final digestAuth = _buildDigestAuthHeader(uri, 'GET');
       if (digestAuth != null) {
         final resp = await http
@@ -396,7 +345,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
         }
       }
 
-      // 2) Try Basic (or no auth) to obtain digest challenge once.
       final resp = await http
           .get(uri, headers: baseHeaders.isNotEmpty ? baseHeaders : null)
           .timeout(const Duration(seconds: 4));
@@ -449,7 +397,8 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   Future<File?> _writeCaptureFile(Uint8List bytes) async {
     try {
       final dir = await _ensureTempDir();
-      final name = 'hik_capture_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final name =
+          'hik_plate_capture_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final path = '${dir.path}${Platform.pathSeparator}$name';
       final file = File(path);
       await file.writeAsBytes(bytes, flush: true);
@@ -664,7 +613,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
       includeAlgorithm = true;
     } else if (algorithmToken.isNotEmpty) {
       debugPrint('Hikvision digest algorithm unsupported: $rawAlgorithm');
-      // fallback to MD5 without sending algorithm token
     }
     final charset = challenge['charset'];
     if (realm.isEmpty || nonce.isEmpty) return null;

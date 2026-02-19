@@ -19,8 +19,8 @@ void main() async {
   CatalogueStorage().preloadCatalogue();
   Environment().initConfig(environment);
   await dotenv.load(fileName: ".env");
-  SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
-  initializeDateFormatting('es');
+  // await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+  await initializeDateFormatting('es');
   runApp(const MyApp());
 }
 

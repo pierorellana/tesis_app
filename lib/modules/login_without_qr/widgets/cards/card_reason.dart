@@ -36,13 +36,6 @@ class ReasonCard extends StatelessWidget {
                     : const Color(0xFFD7DEE8),
                 width: isSelected ? 2 : 1,
               ),
-              boxShadow: [
-                BoxShadow(
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                  color: Colors.black.withOpacity(0.06),
-                ),
-              ],
             ),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             child: Row(

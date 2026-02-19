@@ -102,28 +102,41 @@ class _IdPageState extends State<IdPage> {
         builder: (context, constraints) {
           final r = context.responsive;
           final isShort = constraints.maxHeight < 650;
+          final isTablet = r.isTablet;
           final paddingH = (constraints.maxWidth * 0.05).clamp(16.0, 64.0);
 
-          final titleSize = (r.dp(2.6)).clamp(28.0, 52.0);
-          final hintSize = (r.dp(1.0)).clamp(12.0, 16.0);
+          final titleScale = isTablet ? 1.08 : 1.0;
+          final hintScale = isTablet ? 1.05 : 1.0;
+          final titleSize = (r.dp(2.6) * titleScale).clamp(28.0, 58.0);
+          final hintSize = (r.dp(1.0) * hintScale).clamp(12.0, 18.0);
 
           final availableWidth = constraints.maxWidth - (paddingH * 2);
-          final maxCardWidth = (availableWidth * 0.86).clamp(320.0, 860.0);
-          final maxCardHeight = (constraints.maxHeight * (isShort ? 0.5 : 0.62))
-              .clamp(260.0, 520.0);
+          final widthFactor = isTablet ? 0.9 : 0.86;
+          final heightFactor = isTablet ? 0.7 : (isShort ? 0.5 : 0.62);
+          final maxCardWidth = math.max(availableWidth * widthFactor, 320.0);
+          final maxCardHeight = math.max(
+            constraints.maxHeight * heightFactor,
+            260.0,
+          );
           const aspect = 0.62;
           final cardWidth = math.min(maxCardWidth, maxCardHeight / aspect);
           final cardHeight = cardWidth * aspect;
 
-          final outerPad = (r.dp(1.1)).clamp(14.0, 20.0);
-          final innerPad = (r.dp(1.2)).clamp(16.0, 22.0);
+          final padScale = isTablet ? 1.06 : 1.0;
+          final outerPad = (r.dp(1.1) * padScale).clamp(14.0, 22.0);
+          final innerPad = (r.dp(1.2) * padScale).clamp(16.0, 24.0);
 
-          final gapTitle = (constraints.maxHeight * 0.02).clamp(8.0, 16.0);
-          final gapBlock = (constraints.maxHeight * 0.03).clamp(12.0, 26.0);
-          final gapAfterCamera = (constraints.maxHeight * 0.035).clamp(
-            16.0,
-            30.0,
+          final gapScale = isTablet ? 1.08 : 1.0;
+          final gapTitle = (constraints.maxHeight * 0.02 * gapScale).clamp(
+            8.0,
+            18.0,
           );
+          final gapBlock = (constraints.maxHeight * 0.03 * gapScale).clamp(
+            12.0,
+            28.0,
+          );
+          final gapAfterCamera = (constraints.maxHeight * 0.035 * gapScale)
+              .clamp(16.0, 34.0);
 
           return SingleChildScrollView(
             child: Column(
@@ -173,24 +186,26 @@ class _IdPageState extends State<IdPage> {
                   ],
                 ),
                 Padding(
-                  padding: EdgeInsets.only(
-                    top: (constraints.maxHeight * 0.03).clamp(12.0, 22.0),
-                  ),
-                  child: SizedBox(
-                    width: (constraints.maxWidth * 0.22).clamp(120.0, 160.0),
-                    height: (constraints.maxHeight * 0.08).clamp(48.0, 58.0),
-                    child: OutlinedButton(
+                  padding: EdgeInsets.only(left: 20),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
                       onPressed: widget.onBack,
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: const Text(
+                        'Volver',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.dark,
                         side: const BorderSide(color: Color(0xFFD7DEE8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
-                      ),
-                      child: const Text(
-                        'Volver',
-                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),

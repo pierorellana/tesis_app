@@ -31,7 +31,7 @@ class _QrCodeWidgetState extends State<QrCodeWidget>
 
   final MobileScannerController _scannerController = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
-    facing: CameraFacing.back,
+    facing: CameraFacing.front,
   );
 
   bool _alreadyScanned = false;
