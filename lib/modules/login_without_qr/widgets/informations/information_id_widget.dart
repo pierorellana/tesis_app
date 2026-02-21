@@ -57,10 +57,8 @@ class ConfirmIdDataWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Field(label: 'Nombres', value: data.names),
-              const SizedBox(height: 18),
-              _Field(label: 'Apellidos', value: data.surnames),
-              const SizedBox(height: 18),
+              _Field(label: 'Nombre completo', value: data.surnames),
+              const SizedBox(height: 12),
               _Field(label: 'Identificación', value: data.identification),
             ],
           ),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +32,7 @@ class _IdPageState extends State<IdPage> {
   final OcrCedulaService _cedulaService = OcrCedulaService();
   CedulaResponse? _cedula;
   IdParsedData? _parsed;
+  XFile? _lastCapture;
 
   @override
   void initState() {
@@ -55,6 +57,7 @@ class _IdPageState extends State<IdPage> {
       _uiState = GlobalHelper.IdUiState.reading;
       _parsed = null;
       _cedula = null;
+      _lastCapture = file;
     });
 
     final CedulaResponse? ced = await _getInfoCedula(file);
@@ -92,6 +95,7 @@ class _IdPageState extends State<IdPage> {
     setState(() {
       _uiState = GlobalHelper.IdUiState.camera;
       _parsed = null;
+      _lastCapture = null;
     });
   }
 
@@ -138,6 +142,9 @@ class _IdPageState extends State<IdPage> {
           final gapAfterCamera = (constraints.maxHeight * 0.035 * gapScale)
               .clamp(16.0, 34.0);
 
+          final previewWidth = (cardWidth * 0.58).clamp(240.0, 420.0);
+          final previewHeight = previewWidth * (cardHeight / cardWidth);
+
           return SingleChildScrollView(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -155,15 +162,26 @@ class _IdPageState extends State<IdPage> {
                       ),
                     ),
                     SizedBox(height: gapBlock),
-                    HikvisionCameraWidget(
-                      controller: _hikController,
-                      config: _hikConfig,
-                      autoCapture: true,
-                      onCaptured: _onCaptured,
-                      width: cardWidth,
-                      height: cardHeight,
-                      padding: EdgeInsets.all(outerPad),
-                      framePadding: EdgeInsets.all(innerPad),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: gapBlock,
+                      runSpacing: gapBlock,
+                      children: [
+                        HikvisionCameraWidget(
+                          controller: _hikController,
+                          config: _hikConfig,
+                          autoCapture: true,
+                          onCaptured: _onCaptured,
+                          width: cardWidth,
+                          height: cardHeight,
+                          padding: EdgeInsets.all(outerPad),
+                          framePadding: EdgeInsets.all(innerPad),
+                        ),
+                        _buildPreviewPanel(
+                          width: previewWidth,
+                          height: previewHeight,
+                        ),
+                      ],
                     ),
                     SizedBox(height: gapAfterCamera),
                     Text(
@@ -218,10 +236,11 @@ class _IdPageState extends State<IdPage> {
     }
 
     if (_uiState == GlobalHelper.IdUiState.reading) {
-      return const ReadingIdInfoWidget();
+      return _buildWithPreview(const ReadingIdInfoWidget());
     }
 
-    return ConfirmIdDataWidget(
+    return _buildWithPreview(
+      ConfirmIdDataWidget(
       data:
           _parsed ??
           const IdParsedData(names: '-', surnames: '-', identification: '-'),
@@ -236,6 +255,71 @@ class _IdPageState extends State<IdPage> {
         );
       },
       onRetry: _retry,
+      ),
+    );
+  }
+
+  Widget _buildWithPreview(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final previewWidth = (constraints.maxWidth * 0.28).clamp(220.0, 360.0);
+        final previewHeight = previewWidth * 0.62;
+
+        return Center(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 24,
+            runSpacing: 24,
+            children: [
+              child,
+              _buildPreviewPanel(
+                width: previewWidth,
+                height: previewHeight,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPreviewPanel({required double width, required double height}) {
+    final file = _lastCapture;
+    return Container(
+      width: width,
+      height: height,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD7DEE8)),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.06),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: file != null
+            ? Image.file(
+                File(file.path),
+                fit: BoxFit.contain,
+              )
+            : Container(
+                alignment: Alignment.center,
+                color: const Color(0xFFF2F5FA),
+                child: Text(
+                  'Vista previa',
+                  style: TextStyle(
+                    color: AppTheme.hinText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+      ),
     );
   }
 }

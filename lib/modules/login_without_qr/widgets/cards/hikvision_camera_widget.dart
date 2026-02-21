@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:crypto/crypto.dart';
@@ -113,6 +114,7 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   DateTime _lastProcess = DateTime.fromMillisecondsSinceEpoch(0);
   int _stableHits = 0;
   Directory? _tempDir;
+  Size? _previewSize;
 
   Uint8List? _snapshotCache;
   DateTime _snapshotCacheAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -343,10 +345,22 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   }
 
   Future<Uint8List?> _fetchFrameBytes() async {
+    return _fetchFrameBytesInternal(crop: false);
+  }
+
+  Future<Uint8List?> _fetchCroppedFrameBytes() async {
+    return _fetchFrameBytesInternal(crop: true);
+  }
+
+  Future<Uint8List?> _fetchFrameBytesInternal({required bool crop}) async {
     final snapUrl = widget.config.snapshotUrl;
     if (snapUrl != null && snapUrl.trim().isNotEmpty) {
       final bytes = await _getSnapshotBytes();
-      if (bytes != null && bytes.isNotEmpty) return bytes;
+      if (bytes != null && bytes.isNotEmpty) {
+        if (!crop) return bytes;
+        final cropped = await _cropToCard(bytes);
+        return cropped ?? bytes;
+      }
     }
     return null;
   }
@@ -449,7 +463,8 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   Future<File?> _writeCaptureFile(Uint8List bytes) async {
     try {
       final dir = await _ensureTempDir();
-      final name = 'hik_capture_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ext = _isPng(bytes) ? 'png' : 'jpg';
+      final name = 'hik_capture_${DateTime.now().millisecondsSinceEpoch}.$ext';
       final path = '${dir.path}${Platform.pathSeparator}$name';
       final file = File(path);
       await file.writeAsBytes(bytes, flush: true);
@@ -542,9 +557,20 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
                   borderRadius: BorderRadius.circular(18),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
+                      _previewSize = Size(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                      );
                       final controller = _videoController;
-                      if (controller == null) return _buildPlaceholder();
-                      return Video(controller: controller, fit: BoxFit.cover);
+                      if (controller == null) return _buildLoading();
+
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Video(controller: controller, fit: BoxFit.cover),
+                          if (!_rtspConnected) _buildLoading(),
+                        ],
+                      );
                     },
                   ),
                 ),
@@ -559,22 +585,6 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
                 ),
               ),
             ),
-            if (_errorMessage != null)
-              Positioned.fill(
-                child: Center(
-                  child: Text(
-                    kDebugMode && _errorMessage != null
-                        ? 'No se pudo conectar a la camara\n$_errorMessage'
-                        : 'No se pudo conectar a la camara',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.95),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
             if (_isTaking)
               Positioned.fill(
                 child: Container(
@@ -593,19 +603,124 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
     );
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildLoading() {
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: const Color(0xFFF2F5FA),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Icon(
-        Icons.photo_camera_outlined,
-        size: 46,
-        color: AppTheme.hinText.withOpacity(0.6),
+      child: const SizedBox(
+        width: 34,
+        height: 34,
+        child: CircularProgressIndicator(strokeWidth: 3),
       ),
     );
+  }
+
+  Future<Uint8List?> _cropToCard(Uint8List bytes) async {
+    final previewSize = _previewSize;
+    if (previewSize == null ||
+        previewSize.width <= 0 ||
+        previewSize.height <= 0) {
+      return bytes;
+    }
+
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+      final imgW = image.width.toDouble();
+      final imgH = image.height.toDouble();
+      if (imgW <= 2 || imgH <= 2) {
+        image.dispose();
+        return bytes;
+      }
+
+      final cropViewRect = _buildCardCropRect(previewSize);
+
+      final scale = max(
+        previewSize.width / imgW,
+        previewSize.height / imgH,
+      );
+      final dx = (previewSize.width - imgW * scale) / 2.0;
+      final dy = (previewSize.height - imgH * scale) / 2.0;
+
+      final left = (cropViewRect.left - dx) / scale;
+      final top = (cropViewRect.top - dy) / scale;
+      final right = (cropViewRect.right - dx) / scale;
+      final bottom = (cropViewRect.bottom - dy) / scale;
+
+      final clampedLeft = left.clamp(0.0, imgW);
+      final clampedTop = top.clamp(0.0, imgH);
+      final clampedRight = right.clamp(0.0, imgW);
+      final clampedBottom = bottom.clamp(0.0, imgH);
+
+      final cropW = (clampedRight - clampedLeft).clamp(0.0, imgW);
+      final cropH = (clampedBottom - clampedTop).clamp(0.0, imgH);
+
+      if (cropW < 2 || cropH < 2) {
+        image.dispose();
+        return bytes;
+      }
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final srcRect = Rect.fromLTWH(
+        clampedLeft,
+        clampedTop,
+        cropW,
+        cropH,
+      );
+      final dstRect = Rect.fromLTWH(0, 0, cropW, cropH);
+      canvas.drawImageRect(image, srcRect, dstRect, Paint());
+
+      final picture = recorder.endRecording();
+      final croppedImage = await picture.toImage(
+        cropW.round(),
+        cropH.round(),
+      );
+      final byteData =
+          await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+
+      image.dispose();
+      croppedImage.dispose();
+
+      return byteData?.buffer.asUint8List() ?? bytes;
+    } catch (e) {
+      debugPrint('Hikvision crop error: $e');
+      return bytes;
+    }
+  }
+
+  Rect _buildCardCropRect(Size previewSize) {
+    const aspect = 1.585; // ID-1 (credit card) aspect ratio.
+    const scale = 0.70; // Ajuste visual sobre el preview.
+    final maxW = previewSize.width * scale;
+    final maxH = previewSize.height * scale;
+
+    var w = maxW;
+    var h = w / aspect;
+    if (h > maxH) {
+      h = maxH;
+      w = h * aspect;
+    }
+
+    final left = (previewSize.width - w) / 2;
+    final top = (previewSize.height - h) / 2;
+    return Rect.fromLTWH(left, top, w, h);
+  }
+
+  bool _isPng(Uint8List bytes) {
+    if (bytes.lengthInBytes < 8) return false;
+    return bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47 &&
+        bytes[4] == 0x0D &&
+        bytes[5] == 0x0A &&
+        bytes[6] == 0x1A &&
+        bytes[7] == 0x0A;
   }
 
   Map<String, String> _parseDigestChallenge(String header) {

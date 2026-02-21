@@ -110,6 +110,19 @@ class InterceptorHttp {
         }
       }
 
+      dynamic _tryDecodeJson(String value) {
+        final trimmed = value.trimLeft();
+        if (trimmed.isEmpty) return null;
+        if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) {
+          return null;
+        }
+        try {
+          return json.decode(value);
+        } catch (_) {
+          return null;
+        }
+      }
+
       switch (requestType) {
         case "JSON":
           switch (method) {
@@ -146,7 +159,12 @@ class InterceptorHttp {
           responseBody = response.body;
 
           GlobalHelper.logger.w('statusCode: $responseStatusCode');
-          GlobalHelper.logger.log(Level.trace, json.decode(responseBody));
+          final decoded = _tryDecodeJson(responseBody);
+          if (decoded != null) {
+            GlobalHelper.logger.log(Level.trace, decoded);
+          } else {
+            GlobalHelper.logger.log(Level.trace, 'responseBody: $responseBody');
+          }
 
           break;
         case "FORM":
@@ -161,6 +179,27 @@ class InterceptorHttp {
           }
           if (multipartFields != null) {
             requestMultipart.fields.addAll(multipartFields);
+          }
+
+          if (multipartFields != null && multipartFields.isNotEmpty) {
+            GlobalHelper.logger.log(
+              Level.trace,
+              'multipartFields: ${json.encode(multipartFields)}',
+            );
+          }
+          if (multipartFiles != null && multipartFiles.isNotEmpty) {
+            final filesDebug = multipartFiles
+                .map(
+                  (f) => {
+                    'field': f.field,
+                    'filename': f.filename,
+                  },
+                )
+                .toList();
+            GlobalHelper.logger.log(
+              Level.trace,
+              'multipartFiles: ${json.encode(filesDebug)}',
+            );
           }
 
           // requestMultipart.headers['Authorization'] = 'Bearer $tokenSesion';
@@ -201,53 +240,67 @@ class InterceptorHttp {
           var statusCode = httpResponse.statusCode;
 
           responseStatusCode = statusCode;
+          responseBody = await readResponseAsString(httpResponse);
           if (statusCode ~/ 100 != 2) {
-            var errorResponse = await httpResponse
-                .transform(utf8.decoder)
-                .join();
-            responseBody = errorResponse;
             GlobalHelper.logger.e("Error en la solicitud: $responseBody");
-          } else {
-            await for (var data in httpResponse.transform(utf8.decoder)) {
-              responseBody = data;
-            }
           }
+
+          GlobalHelper.logger.w('statusCode: $responseStatusCode');
+          final decoded = _tryDecodeJson(responseBody);
+          if (decoded != null) {
+            GlobalHelper.logger.log(Level.trace, decoded);
+          } else {
+            GlobalHelper.logger.log(Level.trace, 'responseBody: $responseBody');
+          }
+        
           break;
       }
 
       switch (responseStatusCode) {
         case 200:
-          var responseDecoded = json.decode(responseBody);
-          generalResponse.data = responseDecoded["data"];
-          generalResponse.message = responseDecoded["message"];
-          generalResponse.error = false;
+          final responseDecoded = _tryDecodeJson(responseBody);
+          if (responseDecoded is Map<String, dynamic>) {
+            generalResponse.data = responseDecoded["data"];
+            generalResponse.message = responseDecoded["message"];
+            generalResponse.error = false;
+          } else {
+            generalResponse.error = true;
+            generalResponse.message =
+                "Respuesta inválida del servidor. Revise los logs.";
+          }
           break;
         case 201:
-          var responseDecoded = json.decode(responseBody);
-          generalResponse.data = responseDecoded["data"];
-          generalResponse.message = responseDecoded["message"];
-          generalResponse.error = false;
+          final responseDecoded = _tryDecodeJson(responseBody);
+          if (responseDecoded is Map<String, dynamic>) {
+            generalResponse.data = responseDecoded["data"];
+            generalResponse.message = responseDecoded["message"];
+            generalResponse.error = false;
+          } else {
+            generalResponse.error = true;
+            generalResponse.message =
+                "Respuesta inválida del servidor. Revise los logs.";
+          }
           break;
         case 400:
-          var responseDecoded = json.decode(responseBody);
+          final responseDecoded = _tryDecodeJson(responseBody);
           generalResponse.message = _extractMessage(responseDecoded);
           generalResponse.error = true;
           fp.dismissAlert(key: keyLoading);
           break;
         case 401:
-          var responseDecoded = json.decode(responseBody);
+          final responseDecoded = _tryDecodeJson(responseBody);
           generalResponse.message = _extractMessage(responseDecoded);
           generalResponse.error = true;
           fp.dismissAlert(key: keyLoading);
           break;
         case 404:
-          var responseDecoded = json.decode(responseBody);
+          final responseDecoded = _tryDecodeJson(responseBody);
           generalResponse.message = _extractMessage(responseDecoded);
           generalResponse.error = true;
           fp.dismissAlert(key: keyLoading);
           break;
         default:
-          var responseDecoded = json.decode(responseBody);
+          final responseDecoded = _tryDecodeJson(responseBody);
           generalResponse.error = true;
           generalResponse.message = _extractMessage(responseDecoded);
           fp.dismissAlert(key: keyLoading);

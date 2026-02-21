@@ -7,14 +7,16 @@ class RejectedValidationFace extends StatelessWidget {
     super.key,
     required this.onRetry,
     required this.onBackToStart,
+    this.preview,
   });
 
   final VoidCallback onRetry;
   final VoidCallback onBackToStart;
+  final Widget? preview;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final content = Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const StatusIconAnimated(
@@ -108,6 +110,24 @@ class RejectedValidationFace extends StatelessWidget {
           ],
         ),
       ],
+    );
+
+    if (preview == null) {
+      return content;
+    }
+
+    return SingleChildScrollView(
+      child: Center(
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 24,
+          runSpacing: 24,
+          children: [
+            content,
+            preview!,
+          ],
+        ),
+      ),
     );
   }
 }

@@ -64,6 +64,9 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
   Directory? _tempDir;
   Uint8List? _snapshotCache;
   DateTime _snapshotCacheAt = DateTime.fromMillisecondsSinceEpoch(0);
+  Uint8List? _lastFaceFrame;
+  Uint8List? _cedulaPreviewBytes;
+  DateTime _lastPreviewUpdate = DateTime.fromMillisecondsSinceEpoch(0);
 
   Map<String, String>? _digestChallenge;
   int _digestNc = 0;
@@ -76,14 +79,15 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
   void initState() {
     super.initState();
     _cameraConfig = _buildConfigFromEnv();
+    _cedulaPreviewBytes = _decodeBase64Image(widget.fotoCedulaBase64);
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
         enableClassification: true,
         enableLandmarks: false,
         enableContours: false,
         enableTracking: true,
-        performanceMode: FaceDetectorMode.fast,
-        minFaceSize: 0.15,
+        performanceMode: FaceDetectorMode.accurate,
+        minFaceSize: 0.08,
       ),
     );
     _startRtspPreview();
@@ -100,6 +104,14 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
     _player?.dispose();
     _faceDetector.close();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant ValidationFacePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fotoCedulaBase64 != widget.fotoCedulaBase64) {
+      _cedulaPreviewBytes = _decodeBase64Image(widget.fotoCedulaBase64);
+    }
   }
 
   HikvisionCameraConfig _buildConfigFromEnv() {
@@ -275,6 +287,8 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
         return;
       }
 
+      _updateFacePreview(bytes);
+
       final imageSize = await _decodeImageSize(bytes);
       if (imageSize == null) {
         _stableHits = 0;
@@ -298,7 +312,7 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
 
       _stableHits = ok ? _stableHits + 1 : 0;
 
-      if (ok && _stableHits >= 3) {
+      if (ok && _stableHits >= 2) {
         await _validateFace(bytes);
       }
     } catch (_) {
@@ -322,27 +336,37 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
     final areaRatio =
         (box.width * box.height) / (imageSize.width * imageSize.height);
 
-    if (areaRatio < 0.12 || areaRatio > 0.7) return false;
+    if (areaRatio < 0.06 || areaRatio > 0.9) return false;
 
     final center = box.center;
     final dx = (center.dx - imageSize.width / 2).abs() / imageSize.width;
     final dy = (center.dy - imageSize.height / 2).abs() / imageSize.height;
 
-    if (dx > 0.18 || dy > 0.2) return false;
+    if (dx > 0.28 || dy > 0.28) return false;
 
     final yaw = (face.headEulerAngleY ?? 0).abs();
     final roll = (face.headEulerAngleZ ?? 0).abs();
     final pitch = (face.headEulerAngleX ?? 0).abs();
 
-    if (yaw > 15 || roll > 12 || pitch > 15) return false;
+    if (yaw > 25 || roll > 20 || pitch > 25) return false;
 
     final leftEye = face.leftEyeOpenProbability;
     final rightEye = face.rightEyeOpenProbability;
     if (leftEye != null && rightEye != null) {
-      if (leftEye < 0.35 || rightEye < 0.35) return false;
+      if (leftEye < 0.2 || rightEye < 0.2) return false;
     }
 
     return true;
+  }
+
+  void _updateFacePreview(Uint8List bytes) {
+    final now = DateTime.now();
+    if (now.difference(_lastPreviewUpdate).inMilliseconds < 500) {
+      return;
+    }
+    _lastPreviewUpdate = now;
+    if (!mounted) return;
+    setState(() => _lastFaceFrame = bytes);
   }
 
   Future<void> _validateFace(Uint8List bytes) async {
@@ -503,9 +527,21 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
     }
 
     if (_uiState == _FaceUiState.rejected) {
-      return RejectedValidationFace(
-        onRetry: _retry,
-        onBackToStart: widget.onBack,
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final previewWidth =
+              (constraints.maxWidth * 0.26).clamp(220.0, 360.0);
+          final previewHeight = previewWidth * 0.62;
+
+          return RejectedValidationFace(
+            onRetry: _retry,
+            onBackToStart: widget.onBack,
+            preview: _buildPreviewPanel(
+              width: previewWidth,
+              height: previewHeight,
+            ),
+          );
+        },
       );
     }
 
@@ -666,6 +702,103 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
         );
       },
     );
+  }
+
+  Widget _buildPreviewPanel({required double width, required double height}) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD7DEE8)),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.06),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildPreviewItem(
+            label: 'Cédula (OCR)',
+            width: width,
+            height: height,
+            bytes: _cedulaPreviewBytes,
+          ),
+          const SizedBox(height: 12),
+          _buildPreviewItem(
+            label: 'Rostro vivo',
+            width: width,
+            height: height,
+            bytes: _lastFaceFrame,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewItem({
+    required String label,
+    required double width,
+    required double height,
+    required Uint8List? bytes,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppTheme.hinText,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F5FA),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: bytes != null
+                ? Image.memory(
+                    bytes,
+                    fit: BoxFit.contain,
+                  )
+                : Center(
+                    child: Text(
+                      'Sin imagen',
+                      style: TextStyle(
+                        color: AppTheme.hinText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Uint8List? _decodeBase64Image(String input) {
+    if (input.trim().isEmpty) return null;
+    try {
+      final trimmed = input.trim();
+      final comma = trimmed.indexOf(',');
+      final raw = comma >= 0 ? trimmed.substring(comma + 1) : trimmed;
+      return base64Decode(raw);
+    } catch (_) {
+      return null;
+    }
   }
 
   Map<String, String> _parseDigestChallenge(String header) {
