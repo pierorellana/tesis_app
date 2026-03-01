@@ -219,10 +219,11 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
       _loggedFirstFrame = true;
       debugPrint('Hikvision RTSP first frame: $params');
     }
+    final wasConnected = _rtspConnected;
     _rtspConnected = true;
     _rtspTimeout?.cancel();
     if (!mounted) return;
-    if (_errorMessage != null) {
+    if (_errorMessage != null || !wasConnected) {
       setState(() => _errorMessage = null);
     }
   }

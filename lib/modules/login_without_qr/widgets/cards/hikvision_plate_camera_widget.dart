@@ -167,10 +167,11 @@ class _HikvisionPlateCameraWidgetState
       _loggedFirstFrame = true;
       debugPrint('Hikvision RTSP first frame: $params');
     }
+    final wasConnected = _rtspConnected;
     _rtspConnected = true;
     _rtspTimeout?.cancel();
     if (!mounted) return;
-    if (_errorMessage != null) {
+    if (_errorMessage != null || !wasConnected) {
       setState(() => _errorMessage = null);
     }
   }
@@ -265,7 +266,9 @@ class _HikvisionPlateCameraWidgetState
       if (input == null) return;
 
       final recognized = await _textRecognizer.processImage(input);
-      final ok = _looksLikePlate(recognized.text);
+      final text = recognized.text;
+      final hasCountry = _containsEcuador(text);
+      final ok = hasCountry && _looksLikePlate(text);
 
       if (ok) {
         _stableHits++;
@@ -273,7 +276,7 @@ class _HikvisionPlateCameraWidgetState
         _stableHits = 0;
       }
 
-      if (_stableHits >= 4) {
+      if (_stableHits >= 3) {
         _autoCaptured = true;
         _stopAutoCapture();
         await takePhoto();
@@ -296,6 +299,15 @@ class _HikvisionPlateCameraWidgetState
     if (shortFormat) return true;
 
     return RegExp(r'\b[A-Z]{2,3}\s*-?\s*\d{3,4}\b').hasMatch(upper);
+  }
+
+  bool _containsEcuador(String text) {
+    if (text.trim().isEmpty) return false;
+    final normalized = text
+        .toUpperCase()
+        .replaceAll(RegExp(r'[^A-Z0-9]'), '')
+        .replaceAll('0', 'O');
+    return normalized.contains('ECUADOR');
   }
 
   Future<Uint8List?> _fetchFrameBytes() async {

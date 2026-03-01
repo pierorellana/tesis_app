@@ -42,7 +42,7 @@ class _ResidentCallPageState extends State<ResidentCallPage> {
   int _attempts = 0;
 
   static const int _maxAttempts = 2;
-  static const Duration _attemptTimeoutDuration = Duration(minutes: 2);
+  static const Duration _attemptTimeoutDuration = Duration(minutes: 1);
 
   @override
   void initState() {
