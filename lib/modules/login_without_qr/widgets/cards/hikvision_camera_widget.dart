@@ -103,6 +103,7 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
   List<String> _rtspCandidates = const [];
   int _rtspCandidateIndex = 0;
   bool _rtspConnected = false;
+  bool _loggedFirstFrame = false;
   late final TextRecognizer _textRecognizer;
 
   bool _isTaking = false;
@@ -168,6 +169,7 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
     _rtspCandidates = _buildRtspCandidates();
     _rtspCandidateIndex = 0;
     _rtspConnected = false;
+    _loggedFirstFrame = false;
 
     if (_rtspCandidates.isEmpty) {
       _errorMessage = 'RTSP URL vacía';
@@ -213,6 +215,10 @@ class _HikvisionCameraWidgetState extends State<HikvisionCameraWidget> {
     final width = params.w ?? params.dw ?? 0;
     final height = params.h ?? params.dh ?? 0;
     if (width <= 0 || height <= 0) return;
+    if (!_loggedFirstFrame) {
+      _loggedFirstFrame = true;
+      debugPrint('Hikvision RTSP first frame: $params');
+    }
     _rtspConnected = true;
     _rtspTimeout?.cancel();
     if (!mounted) return;

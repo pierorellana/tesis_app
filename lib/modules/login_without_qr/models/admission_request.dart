@@ -20,6 +20,7 @@ class AdmissionRequestModel {
   IdParsedData? idData;
   ResidentFound? destination;
   AdmissionReason? reason;
+  int? accesoPk;
 
   String get fullName {
     final d = idData;
@@ -32,10 +33,10 @@ class AdmissionRequestModel {
   String get destinoLabel {
     final d = destination;
     if (d == null) return '-';
-    return 'Manzana ${d.manzana} - Villa ${d.villa}';
+    return '${d.manzana} - ${d.villa}';
   }
 
-  String get residentName => destination?.residentName ?? '-';
+  // String get residentName => destination?.residentName ?? '-';
 
   String get reasonLabel => reason?.label ?? '-';
 }

@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:http/http.dart' as http;
@@ -52,6 +52,7 @@ class _HikvisionPlateCameraWidgetState
   List<String> _rtspCandidates = const [];
   int _rtspCandidateIndex = 0;
   bool _rtspConnected = false;
+  bool _loggedFirstFrame = false;
   late final TextRecognizer _textRecognizer;
 
   bool _isTaking = false;
@@ -116,6 +117,7 @@ class _HikvisionPlateCameraWidgetState
     _rtspCandidates = _buildRtspCandidates();
     _rtspCandidateIndex = 0;
     _rtspConnected = false;
+    _loggedFirstFrame = false;
 
     if (_rtspCandidates.isEmpty) {
       _errorMessage = 'RTSP URL vacía';
@@ -161,6 +163,10 @@ class _HikvisionPlateCameraWidgetState
     final width = params.w ?? params.dw ?? 0;
     final height = params.h ?? params.dh ?? 0;
     if (width <= 0 || height <= 0) return;
+    if (!_loggedFirstFrame) {
+      _loggedFirstFrame = true;
+      debugPrint('Hikvision RTSP first frame: $params');
+    }
     _rtspConnected = true;
     _rtspTimeout?.cancel();
     if (!mounted) return;
@@ -397,8 +403,9 @@ class _HikvisionPlateCameraWidgetState
   Future<File?> _writeCaptureFile(Uint8List bytes) async {
     try {
       final dir = await _ensureTempDir();
+      final ext = _isPng(bytes) ? 'png' : 'jpg';
       final name =
-          'hik_plate_capture_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          'hik_plate_capture_${DateTime.now().millisecondsSinceEpoch}.$ext';
       final path = '${dir.path}${Platform.pathSeparator}$name';
       final file = File(path);
       await file.writeAsBytes(bytes, flush: true);
@@ -492,8 +499,14 @@ class _HikvisionPlateCameraWidgetState
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final controller = _videoController;
-                      if (controller == null) return _buildPlaceholder();
-                      return Video(controller: controller, fit: BoxFit.cover);
+                      if (controller == null) return _buildLoading();
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Video(controller: controller, fit: BoxFit.cover),
+                          if (!_rtspConnected) _buildLoading(),
+                        ],
+                      );
                     },
                   ),
                 ),
@@ -508,22 +521,6 @@ class _HikvisionPlateCameraWidgetState
                 ),
               ),
             ),
-            if (_errorMessage != null)
-              Positioned.fill(
-                child: Center(
-                  child: Text(
-                    kDebugMode && _errorMessage != null
-                        ? 'No se pudo conectar a la camara\n$_errorMessage'
-                        : 'No se pudo conectar a la camara',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.95),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
             if (_isTaking)
               Positioned.fill(
                 child: Container(
@@ -542,17 +539,17 @@ class _HikvisionPlateCameraWidgetState
     );
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildLoading() {
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: const Color(0xFFF2F5FA),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Icon(
-        Icons.photo_camera_outlined,
-        size: 46,
-        color: AppTheme.hinText.withOpacity(0.6),
+      child: const SizedBox(
+        width: 34,
+        height: 34,
+        child: CircularProgressIndicator(strokeWidth: 3),
       ),
     );
   }
@@ -706,6 +703,18 @@ class _HikvisionPlateCameraWidgetState
       buf.write(chars[_rng.nextInt(chars.length)]);
     }
     return buf.toString();
+  }
+
+  bool _isPng(Uint8List bytes) {
+    if (bytes.lengthInBytes < 8) return false;
+    return bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47 &&
+        bytes[4] == 0x0D &&
+        bytes[5] == 0x0A &&
+        bytes[6] == 0x1A &&
+        bytes[7] == 0x0A;
   }
 }
 

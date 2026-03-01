@@ -45,6 +45,8 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
   late final FaceDetector _faceDetector;
   late final HikvisionCameraConfig _cameraConfig;
 
+  static const double _faceZoom = 1.6;
+
   Player? _player;
   VideoController? _videoController;
   StreamSubscription<dynamic>? _playerErrorSub;
@@ -53,6 +55,7 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
   List<String> _rtspCandidates = const [];
   int _rtspCandidateIndex = 0;
   bool _rtspConnected = false;
+  // bool _loggedFirstFrame = false;
 
   Timer? _scanTimer;
   bool _processingFrame = false;
@@ -145,6 +148,7 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
     _rtspCandidates = _buildRtspCandidates();
     _rtspCandidateIndex = 0;
     _rtspConnected = false;
+    // _loggedFirstFrame = false;
 
     if (_rtspCandidates.isEmpty) {
       _errorMessage = 'RTSP URL vacía';
@@ -190,6 +194,10 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
     final width = params.w ?? params.dw ?? 0;
     final height = params.h ?? params.dh ?? 0;
     if (width <= 0 || height <= 0) return;
+    // if (!_loggedFirstFrame) {
+    //   _loggedFirstFrame = true;
+    //   debugPrint('Hikvision FACE first frame: $params');
+    // }
     _rtspConnected = true;
     _rtspTimeout?.cancel();
     if (!mounted) return;
@@ -313,7 +321,11 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
       _stableHits = ok ? _stableHits + 1 : 0;
 
       if (ok && _stableHits >= 2) {
-        await _validateFace(bytes);
+        await _validateFace(
+          bytes,
+          faceBox: face.boundingBox,
+          imageSize: imageSize,
+        );
       }
     } catch (_) {
       // ignore frame errors
@@ -369,7 +381,11 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
     setState(() => _lastFaceFrame = bytes);
   }
 
-  Future<void> _validateFace(Uint8List bytes) async {
+  Future<void> _validateFace(
+    Uint8List bytes, {
+    Rect? faceBox,
+    ui.Size? imageSize,
+  }) async {
     if (_isValidating || _uiState != _FaceUiState.scanning) return;
 
     if (widget.fotoCedulaBase64.trim().isEmpty) {
@@ -384,9 +400,20 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
       setState(() => _uiState = _FaceUiState.validating);
     }
 
+    final croppedFace = await _cropFaceBytes(
+      bytes,
+      faceBox: faceBox,
+      imageSize: imageSize,
+    );
+    final facePayload = croppedFace ?? bytes;
+    final facePng = await _toPngBytes(facePayload);
+    if (mounted) {
+      setState(() => _lastFaceFrame = facePng ?? facePayload);
+    }
+
     final payload = {
       'foto_cedula_base64': widget.fotoCedulaBase64,
-      'foto_rostro_vivo_base64': base64Encode(bytes),
+      'foto_rostro_vivo_base64': base64Encode(facePng ?? facePayload),
     };
 
     final response = await _faceService.getFace(context, payload: payload);
@@ -796,6 +823,98 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
       final comma = trimmed.indexOf(',');
       final raw = comma >= 0 ? trimmed.substring(comma + 1) : trimmed;
       return base64Decode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _cropFaceBytes(
+    Uint8List bytes, {
+    Rect? faceBox,
+    ui.Size? imageSize,
+  }) async {
+    if (faceBox == null || imageSize == null) return null;
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+
+      final imgW = image.width.toDouble();
+      final imgH = image.height.toDouble();
+      if (imgW <= 2 || imgH <= 2) {
+        image.dispose();
+        return null;
+      }
+
+      final scaleX = imgW / imageSize.width;
+      final scaleY = imgH / imageSize.height;
+
+      final scaledBox = Rect.fromLTRB(
+        faceBox.left * scaleX,
+        faceBox.top * scaleY,
+        faceBox.right * scaleX,
+        faceBox.bottom * scaleY,
+      );
+
+      final padW = scaledBox.width * 0.65;
+      final padH = scaledBox.height * 0.85;
+      Rect cropRect = Rect.fromLTRB(
+        scaledBox.left - padW,
+        scaledBox.top - padH,
+        scaledBox.right + padW,
+        scaledBox.bottom + padH,
+      );
+
+      cropRect = Rect.fromLTRB(
+        cropRect.left.clamp(0.0, imgW),
+        cropRect.top.clamp(0.0, imgH),
+        cropRect.right.clamp(0.0, imgW),
+        cropRect.bottom.clamp(0.0, imgH),
+      );
+
+      final cropW = (cropRect.right - cropRect.left).clamp(0.0, imgW);
+      final cropH = (cropRect.bottom - cropRect.top).clamp(0.0, imgH);
+      if (cropW < 2 || cropH < 2) {
+        image.dispose();
+        return null;
+      }
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final srcRect = Rect.fromLTWH(
+        cropRect.left,
+        cropRect.top,
+        cropW,
+        cropH,
+      );
+      final dstRect = Rect.fromLTWH(0, 0, cropW, cropH);
+      canvas.drawImageRect(image, srcRect, dstRect, Paint());
+
+      final picture = recorder.endRecording();
+      final croppedImage = await picture.toImage(
+        cropW.round(),
+        cropH.round(),
+      );
+      final byteData =
+          await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+
+      image.dispose();
+      croppedImage.dispose();
+
+      return byteData?.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _toPngBytes(Uint8List bytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      return byteData?.buffer.asUint8List();
     } catch (_) {
       return null;
     }

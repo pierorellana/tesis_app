@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<title>BPMN – Proceso Propuesto Control de Acceso</title>
+<style>
+  body { margin:0; background:#e8edf2; display:flex; flex-direction:column; align-items:center; padding:30px 20px; font-family:'Segoe UI',Arial,sans-serif; }
+  h2 { color:#1e3a5f; margin-bottom:18px; font-size:21px; letter-spacing:0.5px; }
+  svg { border-radius:10px; box-shadow:0 4px 24px rgba(0,0,0,0.18); background:white; }
+</style>
+</head>
+<body>
+<h2>Diagrama BPMN – Proceso Propuesto de Control de Acceso – Entrada de Visitas</h2>
+
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+    <polygon points="0 0,9 3.5,0 7" fill="#4b5563"/>
+  </marker>
+  <marker id="arr-green" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+    <polygon points="0 0,9 3.5,0 7" fill="#059669"/>
+  </marker>
+  <marker id="arr-red" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+    <polygon points="0 0,9 3.5,0 7" fill="#dc2626"/>
+  </marker>
+  <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+    <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.15"/>
+  </filter>
+</defs>
+
+<!-- ═══ POOL TITLE BAR ═══ -->
+<rect x="8" y="8" width="1584" height="40" rx="6" fill="#1e3a5f"/>
+<text x="800" y="33" text-anchor="middle" font-size="19" font-weight="bold" fill="white">
+  Proceso propuesto de control de acceso – Entrada de visitas
+</text>
+
+<!-- ═══ POOL BORDER ═══ -->
+<rect x="8" y="48" width="1584" height="1152" fill="none" stroke="#374151" stroke-width="2" rx="4"/>
+
+<!-- ═══════════════════════════ SWIM LANES ═══════════════════════════ -->
+
+<!-- Lane 1: Visitante  y=48-218 (h=170) -->
+<rect x="8" y="48" width="130" height="170" fill="white" stroke="#374151" stroke-width="1.5"/>
+<text transform="rotate(-90,73,133)" x="73" y="133" text-anchor="middle" font-size="19" font-weight="bold" fill="#374151">Visitante</text>
+<line x1="138" y1="218" x2="1592" y2="218" stroke="#374151" stroke-width="1.5"/>
+
+<!-- Lane 2: Sistema  y=218-878 (h=660) -->
+<rect x="8" y="218" width="130" height="660" fill="white" stroke="#374151" stroke-width="1.5"/>
+<text transform="rotate(-90,73,548)" x="73" y="548" text-anchor="middle" font-size="19" font-weight="bold" fill="#374151">Sistema</text>
+<line x1="138" y1="878" x2="1592" y2="878" stroke="#374151" stroke-width="1.5"/>
+
+<!-- Lane 3: Residente  y=878-1200 (h=322) -->
+<rect x="8" y="878" width="130" height="322" fill="white" stroke="#374151" stroke-width="1.5"/>
+<text transform="rotate(-90,73,1039)" x="73" y="1039" text-anchor="middle" font-size="19" font-weight="bold" fill="#374151">Residente</text>
+
+<!-- ═══════════════════════════ ELEMENTOS BPMN ═══════════════════════════ -->
+
+<!-- ── START EVENT  cx=185, cy=133 ── -->
+<circle cx="185" cy="133" r="24" fill="#bbf7d0" stroke="#16a34a" stroke-width="2.5" filter="url(#shadow)"/>
+<text x="185" y="170" text-anchor="middle" font-size="13" fill="#166534" font-weight="bold">INICIO</text>
+
+<!-- ── T0: Pantalla de ingreso  center(389,133) rect(287,101,205,64) ── -->
+<rect x="287" y="101" width="205" height="84" rx="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.8" filter="url(#shadow)"/>
+<circle cx="299" cy="112" r="4.5" fill="none" stroke="#3b82f6" stroke-width="1.3"/>
+<line x1="299" y1="116" x2="299" y2="127" stroke="#3b82f6" stroke-width="1.3"/>
+<text x="389" y="127" text-anchor="middle" font-size="14" fill="#1e3a8a" font-weight="bold">Pantalla de ingreso</text>
+<text x="389" y="143" text-anchor="middle" font-size="13" fill="#1e3a8a">(Con QR / Sin QR)</text>
+
+<!-- ── G1: ¿Presenta QR?  cx=615, cy=133 ── -->
+<polygon points="615,89 659,133 615,177 571,133" fill="#fde68a" stroke="#d97706" stroke-width="2" filter="url(#shadow)"/>
+<line x1="595" y1="113" x2="635" y2="153" stroke="#b45309" stroke-width="2"/>
+<line x1="635" y1="113" x2="595" y2="153" stroke="#b45309" stroke-width="2"/>
+<text x="640" y="193" text-anchor="start" font-size="13" fill="#78350f" font-weight="bold">¿Presenta QR?</text>
+
+<!-- ════════════════════════════════════════ -->
+<!--  RUTA CON QR (izquierda, x~360)        -->
+<!-- ════════════════════════════════════════ -->
+
+<!-- ── T_QR1: Escanear QR + Enviar Backend  center(360,400) rect(258,367,205,65) ── -->
+<rect x="258" y="367" width="205" height="85" rx="8" fill="#a7f3d0" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="360" y="392" text-anchor="middle" font-size="14" fill="#064e3b" font-weight="bold">Escanear QR</text>
+<text x="360" y="407" text-anchor="middle" font-size="13" fill="#064e3b">+ Enviar a Backend</text>
+<text x="360" y="421" text-anchor="middle" font-size="12.5" fill="#047857">(validación)</text>
+
+<!-- ── G_QR: ¿QR válido?  cx=360, cy=540 ── -->
+<polygon points="360,496 404,540 360,584 316,540" fill="#fde68a" stroke="#d97706" stroke-width="2" filter="url(#shadow)"/>
+<line x1="340" y1="520" x2="380" y2="560" stroke="#b45309" stroke-width="2"/>
+<line x1="380" y1="520" x2="340" y2="560" stroke="#b45309" stroke-width="2"/>
+<text x="360" y="600" text-anchor="middle" font-size="13" fill="#78350f" font-weight="bold">¿QR válido?</text>
+
+<!-- ── T_AUTH_QR: Acceso autorizado  center(297,710) rect(200,677,195,65) ── -->
+<rect x="200" y="677" width="195" height="85" rx="8" fill="#a7f3d0" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="297" y="700" text-anchor="middle" font-size="13" fill="#064e3b" font-weight="bold">Mostrar "Acceso</text>
+<text x="297" y="715" text-anchor="middle" font-size="13" fill="#064e3b">autorizado"</text>
+<text x="297" y="730" text-anchor="middle" font-size="12.5" fill="#047857">+ abrir acceso</text>
+
+<!-- ── T_DENY_QR: Acceso denegado  center(519,710) rect(422,677,195,65) ── -->
+<rect x="422" y="677" width="195" height="85" rx="8" fill="#fecaca" stroke="#dc2626" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="519" y="703" text-anchor="middle" font-size="13" fill="#7c2d12" font-weight="bold">Mostrar "Acceso</text>
+<text x="519" y="718" text-anchor="middle" font-size="13" fill="#7c2d12">denegado"</text>
+
+<!-- ── END OK QR  cx=297, cy=830 ── -->
+<circle cx="297" cy="830" r="22" fill="#bbf7d0" stroke="#16a34a" stroke-width="4" filter="url(#shadow)"/>
+<circle cx="297" cy="830" r="14" fill="#22c55e"/>
+<text x="297" y="863" text-anchor="middle" font-size="12" fill="#14532d" font-weight="bold">FIN</text>
+
+<!-- ── END DENY QR  cx=519, cy=830 ── -->
+<circle cx="519" cy="830" r="22" fill="#fecaca" stroke="#dc2626" stroke-width="4" filter="url(#shadow)"/>
+<circle cx="519" cy="830" r="14" fill="#ef4444"/>
+<text x="519" y="863" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="bold">FIN</text>
+
+<!-- ════════════════════════════════════════ -->
+<!--  RUTA SIN QR (derecha, x~880)          -->
+<!-- ════════════════════════════════════════ -->
+
+<!-- ── T_OCR: Paso 1 - OCR Cédula  center(880,305) rect(770,272,220,65) ── -->
+<rect x="770" y="272" width="220" height="85" rx="8" fill="#a7f3d0" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="880" y="296" text-anchor="middle" font-size="14" fill="#064e3b" font-weight="bold">Paso 1: OCR cédula</text>
+<text x="880" y="311" text-anchor="middle" font-size="13" fill="#064e3b">Captura + extracción de datos</text>
+
+<!-- ── T_FACE: Paso 2 - Validación facial  center(880,405) rect(767,372,225,65) ── -->
+<rect x="767" y="372" width="225" height="85" rx="8" fill="#a7f3d0" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="880" y="396" text-anchor="middle" font-size="14" fill="#064e3b" font-weight="bold">Paso 2: Validación facial</text>
+<text x="880" y="411" text-anchor="middle" font-size="13" fill="#064e3b">Foto en vivo vs foto OCR</text>
+
+<!-- ── G_ID: ¿Identidad verificada?  cx=880, cy=510 ── -->
+<polygon points="880,466 924,510 880,554 836,510" fill="#fde68a" stroke="#d97706" stroke-width="2" filter="url(#shadow)"/>
+<line x1="860" y1="490" x2="900" y2="530" stroke="#b45309" stroke-width="2"/>
+<line x1="900" y1="490" x2="860" y2="530" stroke="#b45309" stroke-width="2"/>
+<text x="828" y="508" text-anchor="end" font-size="12.5" fill="#78350f" font-weight="bold">¿Identidad verificada?</text>
+
+<!-- ── T_DENYID: Denegar - identidad  center(1150,590) rect(1040,557,220,65) ── -->
+<rect x="1040" y="557" width="220" height="85" rx="8" fill="#fecaca" stroke="#dc2626" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="1150" y="582" text-anchor="middle" font-size="14" fill="#7c2d12" font-weight="bold">Denegar acceso</text>
+<text x="1150" y="597" text-anchor="middle" font-size="13" fill="#7c2d12">+ registrar evento</text>
+
+<!-- ── END DENY ID  cx=1150, cy=720 ── -->
+<circle cx="1150" cy="720" r="22" fill="#fecaca" stroke="#dc2626" stroke-width="4" filter="url(#shadow)"/>
+<circle cx="1150" cy="720" r="14" fill="#ef4444"/>
+<text x="1150" y="753" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="bold">FIN</text>
+
+<!-- ── T_DEST: Paso 3 - Destino + motivo  center(880,615) rect(767,582,225,65) ── -->
+<rect x="767" y="582" width="225" height="85" rx="8" fill="#a7f3d0" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="880" y="606" text-anchor="middle" font-size="14" fill="#064e3b" font-weight="bold">Paso 3: Destino + motivo</text>
+<text x="880" y="621" text-anchor="middle" font-size="13" fill="#064e3b">Manzana/Villa + tipo ingreso</text>
+
+<!-- ── T_CALL: Llamada automática  center(880,720) rect(767,687,225,65) ── -->
+<rect x="767" y="687" width="225" height="85" rx="8" fill="#a7f3d0" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="880" y="711" text-anchor="middle" font-size="14" fill="#064e3b" font-weight="bold">Llamada automática</text>
+<text x="880" y="726" text-anchor="middle" font-size="13" fill="#064e3b">al residente (máx. 2 intentos)</text>
+
+<!-- ════════════════════════════════════════ -->
+<!--  CARRIL RESIDENTE                       -->
+<!-- ════════════════════════════════════════ -->
+
+<!-- ── T_RES: Residente decide  center(880,920) rect(765,889,230,62) ── -->
+<rect x="765" y="889" width="230" height="82" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="880" y="913" text-anchor="middle" font-size="14" fill="#78350f" font-weight="bold">Residente recibe llamada</text>
+<text x="880" y="928" text-anchor="middle" font-size="13" fill="#78350f">y responde</text>
+
+<!-- ── G_AUTH: ¿Autoriza?  cx=880, cy=1025 ── -->
+<polygon points="880,981 924,1025 880,1069 836,1025" fill="#fde68a" stroke="#d97706" stroke-width="2" filter="url(#shadow)"/>
+<line x1="860" y1="1005" x2="900" y2="1045" stroke="#b45309" stroke-width="2"/>
+<line x1="900" y1="1005" x2="860" y2="1045" stroke="#b45309" stroke-width="2"/>
+<text x="880" y="1085" text-anchor="middle" font-size="13" fill="#78350f" font-weight="bold">¿Autoriza?</text>
+
+<!-- ── T_DENY_AUTH: Denegar - no autorizado  center(640,1025) rect(530,994,220,62) ── -->
+<rect x="530" y="994" width="220" height="82" rx="8" fill="#fecaca" stroke="#dc2626" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="640" y="1018" text-anchor="middle" font-size="14" fill="#7c2d12" font-weight="bold">Denegar acceso</text>
+<text x="640" y="1033" text-anchor="middle" font-size="13" fill="#7c2d12">+ registrar evento</text>
+
+<!-- ── END DENY AUTH  cx=640, cy=1130 ── -->
+<circle cx="640" cy="1130" r="22" fill="#fecaca" stroke="#dc2626" stroke-width="4" filter="url(#shadow)"/>
+<circle cx="640" cy="1130" r="14" fill="#ef4444"/>
+<text x="640" y="1163" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="bold">FIN</text>
+
+<!-- ════════════════════════════════════════ -->
+<!--  POST-AUTORIZACIÓN (Sistema, derecha)   -->
+<!-- ════════════════════════════════════════ -->
+
+<!-- ── T_PLATE: Subproceso Placa  center(1380,600) rect(1275,567,210,65) ── -->
+<rect x="1275" y="567" width="210" height="85" rx="8" fill="#a7f3d0" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="1380" y="591" text-anchor="middle" font-size="14" fill="#064e3b" font-weight="bold">Subproceso: Placa</text>
+<text x="1380" y="606" text-anchor="middle" font-size="13" fill="#064e3b">Captura + OCR placa</text>
+
+<!-- ── T_REG: Registrar ingreso  center(1380,700) rect(1275,667,210,65) ── -->
+<rect x="1275" y="667" width="210" height="85" rx="8" fill="#a7f3d0" stroke="#059669" stroke-width="1.8" filter="url(#shadow)"/>
+<text x="1380" y="691" text-anchor="middle" font-size="14" fill="#064e3b" font-weight="bold">Registrar ingreso</text>
+<text x="1380" y="706" text-anchor="middle" font-size="13" fill="#064e3b">+ abrir acceso (backend)</text>
+
+<!-- ── END OK NO-QR  cx=1380, cy=830 ── -->
+<circle cx="1380" cy="830" r="22" fill="#bbf7d0" stroke="#16a34a" stroke-width="4" filter="url(#shadow)"/>
+<circle cx="1380" cy="830" r="14" fill="#22c55e"/>
+<text x="1380" y="863" text-anchor="middle" font-size="12" fill="#14532d" font-weight="bold">FIN</text>
+
+<!-- ════════════════════════════════════════ -->
+<!--  FLUJOS DE SECUENCIA (FLECHAS)          -->
+<!-- ════════════════════════════════════════ -->
+
+<!-- A1: START → T0 Pantalla -->
+<polyline points="209,133 287,133" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A2: T0 → G1 ¿Presenta QR? -->
+<polyline points="492,133 571,133" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A3 Sí: G1 bottom → down into Sistema → left → T_QR1 top -->
+<polyline points="615,177 615,240 360,240 360,367" fill="none" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-green)"/>
+<rect x="537" y="182" width="28" height="16" fill="white" rx="3"/>
+<text x="551" y="194" text-anchor="middle" font-size="13" fill="#059669" font-weight="bold">Sí</text>
+
+<!-- A4 No: G1 right → right → T_OCR top -->
+<polyline points="659,133 880,133 880,272" fill="none" stroke="#dc2626" stroke-width="1.8" marker-end="url(#arr-red)"/>
+<rect x="668" y="118" width="30" height="16" fill="white" rx="3"/>
+<text x="683" y="130" text-anchor="middle" font-size="13" fill="#dc2626" font-weight="bold">No</text>
+
+<!-- A5: T_QR1 bottom → G_QR top -->
+<polyline points="360,452 360,496" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A6 Sí: G_QR left → T_AUTH_QR top -->
+<polyline points="316,540 297,540 297,677" fill="none" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-green)"/>
+<rect x="238" y="525" width="28" height="16" fill="white" rx="3"/>
+<text x="252" y="537" text-anchor="middle" font-size="13" fill="#059669" font-weight="bold">Sí</text>
+
+<!-- A7 No: G_QR right → T_DENY_QR top -->
+<polyline points="404,540 519,540 519,677" fill="none" stroke="#dc2626" stroke-width="1.8" marker-end="url(#arr-red)"/>
+<rect x="416" y="525" width="30" height="16" fill="white" rx="3"/>
+<text x="431" y="537" text-anchor="middle" font-size="13" fill="#dc2626" font-weight="bold">No</text>
+
+<!-- A8: T_AUTH_QR bottom → END_OK_QR top -->
+<polyline points="297,762 297,808" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A9: T_DENY_QR bottom → END_DENY_QR top -->
+<polyline points="519,762 519,808" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A10: T_OCR bottom → T_FACE top -->
+<polyline points="880,357 880,372" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A11: T_FACE bottom → G_ID top -->
+<polyline points="880,457 880,466" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A12 Sí: G_ID bottom → T_DEST top -->
+<polyline points="880,554 880,582" fill="none" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-green)"/>
+<rect x="820" y="556" width="28" height="16" fill="white" rx="3"/>
+<text x="834" y="568" text-anchor="middle" font-size="13" fill="#059669" font-weight="bold">Sí</text>
+
+<!-- A13 No: G_ID right → T_DENYID top -->
+<polyline points="924,510 1150,510 1150,557" fill="none" stroke="#dc2626" stroke-width="1.8" marker-end="url(#arr-red)"/>
+<rect x="933" y="495" width="30" height="16" fill="white" rx="3"/>
+<text x="948" y="507" text-anchor="middle" font-size="13" fill="#dc2626" font-weight="bold">No</text>
+
+<!-- A14: T_DENYID bottom → END_DENY_ID top -->
+<polyline points="1150,642 1150,698" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A15: T_DEST bottom → T_CALL top -->
+<polyline points="880,667 880,687" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A16: T_CALL bottom → T_RES top (cruza carril Sistema → Residente) -->
+<polyline points="880,772 880,889" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A17: T_RES bottom → G_AUTH top -->
+<polyline points="880,971 880,981" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A18 No/Sin resp: G_AUTH left → T_DENY_AUTH right -->
+<polyline points="836,1025 750,1025" fill="none" stroke="#dc2626" stroke-width="1.8" marker-end="url(#arr-red)"/>
+<rect x="754" y="1008" width="78" height="16" fill="white" rx="3"/>
+<text x="793" y="1020" text-anchor="middle" font-size="12.5" fill="#dc2626" font-weight="bold">No / Sin resp.</text>
+
+<!-- A19: T_DENY_AUTH bottom → END_DENY_AUTH top -->
+<polyline points="640,1076 640,1108" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A20 Sí: G_AUTH right → far right → up → T_PLATE right edge -->
+<polyline points="924,1025 1500,1025 1500,600 1485,600" fill="none" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-green)"/>
+<rect x="933" y="1008" width="28" height="16" fill="white" rx="3"/>
+<text x="947" y="1020" text-anchor="middle" font-size="13" fill="#059669" font-weight="bold">Sí</text>
+
+<!-- A21: T_PLATE bottom → T_REG top -->
+<polyline points="1380,652 1380,667" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+<!-- A22: T_REG bottom → END_OK_NOQR top -->
+<polyline points="1380,752 1380,808" fill="none" stroke="#4b5563" stroke-width="1.8" marker-end="url(#arr)"/>
+
+</svg>
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arquitectura General - Tesis App</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #ffffff;
+    font-family: 'Manrope', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 32px;
+  }
+
+  .wrapper { max-width: 1200px; width: 100%; }
+
+  .header { margin-bottom: 28px; }
+  .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #101828; letter-spacing: -0.2px; }
+  .chip {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4f46e5;
+    background: #eef2ff;
+    padding: 4px 10px;
+    border-radius: 18px;
+  }
+  .subtitle { font-size: 13px; color: #6b7280; }
+
+  .diagram {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 180px;
+  }
+
+  .role-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .role-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+
+  .card {
+    border-radius: 14px;
+    background: #f7f8fb;
+    border: 1.5px solid #e2e5ea;
+    padding: 20px 18px;
+  }
+  .card-title { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+  .card-sub { font-size: 12px; color: #6b7280; margin-bottom: 14px; }
+  .card-icon { display: flex; justify-content: center; }
+  .card-icon img,
+  .card-icon svg { width: 40px; height: 40px; object-fit: contain; display: block; }
+
+  .card-client {
+    width: 150px;
+    flex-shrink: 0;
+    background: #f7f8fb;
+    border-color: #e2e5ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    padding: 12px 10px;
+  }
+
+  .card-backend {
+    flex: 1;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7f8fb;
+    border-color: #e2e5ea;
+    text-align: center;
+  }
+
+  .logo-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-stack .logo-python { width: 44px; height: 44px; }
+  .logo-stack .logo-fastapi { width: 96px; height: 18px; }
+
+  .card-integration {
+    width: 260px;
+    flex-shrink: 0;
+    background: #f7f8fb;
+    border: 1.5px solid #e2e5ea;
+    border-radius: 14px;
+    padding: 12px 10px 10px;
+    text-align: center;
+  }
+  .card-integration .card-title {
+    font-size: 12px;
+    margin-bottom: 10px;
+    color: #1f2937;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .flow-node {
+    width: 56px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.15;
+  }
+  .flow-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  .flow-label { font-size: 9.5px; font-weight: 600; color: #475569; }
+  .flow-sub { font-size: 8.5px; color: #94a3b8; }
+  .flow-arrow {
+    width: 16px;
+    height: 2px;
+    background: #cbd5e1;
+    position: relative;
+  }
+  .flow-arrow::after {
+    content: '';
+    position: absolute;
+    right: -2px;
+    top: -4px;
+    border-left: 6px solid #cbd5e1;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+  }
+
+  .frontend-col {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .v-connector {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 24px;
+  }
+  .frontend-col .card-integration {
+    position: absolute;
+    top: calc(100% + 40px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .connector {
+    width: 110px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .device-block {
+    width: 120px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .device-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: #f1f5f9;
+    border: 1.5px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .externals {
+    width: 190px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ext-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: #60a5fa;
+    text-transform: none;
+    padding-left: 0;
+    margin-bottom: 2px;
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+  }
+  .ext-card {
+    background: #f7f8fb;
+    border: 1.5px solid #e2e5ea;
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .ext-ico {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .ext-name { font-size: 12px; font-weight: 600; color: #1f2937; }
+  .ext-type { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+
+  .footer { margin-top: 22px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .leg { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #6b7280; }
+  .leg-line { width: 24px; height: 2px; border-radius: 2px; }
+  .leg-solid { background: #94a3b8; }
+  .leg-dashed { background: repeating-linear-gradient(90deg, #60a5fa 0 5px, transparent 5px 9px); }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="header">
+    <div class="header-row">
+      <h1>Arquitectura General</h1>
+    </div>
+    <p class="subtitle">Frontend → Backend → Integraciones y datos</p>
+  </div>
+
+  <div class="diagram">
+
+    <div class="device-block">
+      <div class="device-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <rect x="6" y="12" width="36" height="20" rx="3" stroke="#64748b" stroke-width="2"/>
+          <path d="M18 34h12" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+          <path d="M24 34v6" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+          <path d="M16 40h16" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="connector">
+      <svg width="110" height="40" viewBox="0 0 110 40" fill="none" aria-hidden="true">
+        <defs>
+          <marker id="g0b" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+        <line x1="104" y1="20" x2="6" y2="20" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#g0b)"/>
+      </svg>
+    </div>
+
+    <div class="frontend-col">
+      <div class="role-block">
+        <div class="role-label">Frontend</div>
+        <div class="card card-client">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 64 64" aria-label="Flutter logo" role="img">
+              <g transform="matrix(.061615 0 0 .061615 -1.430818 -1.2754)">
+                <defs>
+                  <path id="A" d="M959.4 500L679.8 779.7l279.6 279.7H639.9L360.2 779.7 639.9 500h319.5zM639.9 20.7L120.6 540l159.8 159.8 679-679.1H639.9z"/>
+                </defs>
+                <clipPath id="B"><use xlink:href="#A"/></clipPath>
+                <g clip-path="url(#B)"><path d="M360.3 779.7L520 939.5 959.4 500H639.9z" fill="#39cefd"/></g>
+                <defs>
+                  <path id="C" d="M959.4 500L679.8 779.7l279.6 279.7H639.9L360.2 779.7 639.9 500h319.5zM639.9 20.7L120.6 540l159.8 159.8 679-679.1H639.9z"/>
+                </defs>
+                <clipPath id="D"><use xlink:href="#C"/></clipPath>
+                <path clip-path="url(#D)" d="M639.9 20.7h319.5l-679 679.1L120.6 540z" fill="#39cefd"/>
+                <defs>
+                  <path id="E" d="M959.4 500L679.8 779.7l279.6 279.7H639.9L360.2 779.7 639.9 500h319.5zM639.9 20.7L120.6 540l159.8 159.8 679-679.1H639.9z"/>
+                </defs>
+                <clipPath id="F"><use xlink:href="#E"/></clipPath>
+                <path clip-path="url(#F)" d="M520 939.5l119.9 119.8h319.5L679.8 779.7z" fill="#03569b"/>
+                <defs>
+                  <path id="G" d="M959.4 500L679.8 779.7l279.6 279.7H639.9L360.2 779.7 639.9 500h319.5zM639.9 20.7L120.6 540l159.8 159.8 679-679.1H639.9z"/>
+                </defs>
+                <clipPath id="H"><use xlink:href="#G"/></clipPath>
+                <linearGradient id="I" gradientUnits="userSpaceOnUse" x1="566.635" y1="970.339" x2="685.65" y2="851.324">
+                  <stop offset="0" stop-color="#1a237e" stop-opacity=".4"/>
+                  <stop offset="1" stop-color="#1a237e" stop-opacity="0"/>
+                </linearGradient>
+                <path clip-path="url(#H)" d="M757 857.4l-77.2-77.7L520 939.5z" fill="url(#I)"/>
+                <defs>
+                  <path id="J" d="M959.4 500L679.8 779.7l279.6 279.7H639.9L360.2 779.7 639.9 500h319.5zM639.9 20.7L120.6 540l159.8 159.8 679-679.1H639.9z"/>
+                </defs>
+                <clipPath id="K"><use xlink:href="#J"/></clipPath>
+                <g clip-path="url(#K)"><path d="M360.282 779.645L520.086 619.84 679.9 779.645 520.086 939.45z" fill="#16b9fd"/></g>
+                <radialGradient id="L" cx="7824.659" cy="-2855.979" r="5082.889" gradientTransform="matrix(0.25,0,0,-0.25,-1812,-622.5)" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#fff" stop-opacity=".1"/>
+                  <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+                </radialGradient>
+                <path d="M959.4 500L679.8 779.7l279.6 279.7H639.9L360.2 779.7 639.9 500h319.5zM639.9 20.7L120.6 540l159.8 159.8 679-679.1H639.9z" fill="url(#L)"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+
+    <div class="connector">
+      <svg width="110" height="70" viewBox="0 0 110 70" fill="none" aria-hidden="true">
+        <defs>
+          <marker id="g1a" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" fill="#4f46e5"/>
+          </marker>
+          <marker id="g1b" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+        <line x1="6" y1="24" x2="104" y2="24" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#g1a)"/>
+        <line x1="104" y1="46" x2="8" y2="46" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#g1b)"/>
+        <text x="55" y="12" font-size="10" fill="#94a3b8" text-anchor="middle">REST / JSON</text>
+        <text x="55" y="64" font-size="10" fill="#94a3b8" text-anchor="middle">response</text>
+      </svg>
+    </div>
+
+    <div class="role-block">
+      <div class="role-label">Backend</div>
+      <div class="card card-backend">
+        <div class="logo-stack">
+          <svg class="logo-python" version="1.1" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://web.resource.org/cc/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0.21 -0.077 110 110" aria-label="Python logo" role="img">
+            <linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="63.8159" y1="56.6829" x2="118.4934" y2="1.8225" gradientTransform="matrix(1 0 0 -1 -53.2974 66.4321)">
+              <stop offset="0" style="stop-color:#387EB8"/>
+              <stop offset="1" style="stop-color:#366994"/>
+            </linearGradient>
+            <path fill="url(#SVGID_1_)" d="M55.023-0.077c-25.971,0-26.25,10.081-26.25,12.156c0,3.148,0,12.594,0,12.594h26.75v3.781 c0,0-27.852,0-37.375,0c-7.949,0-17.938,4.833-17.938,26.25c0,19.673,7.792,27.281,15.656,27.281c2.335,0,9.344,0,9.344,0 s0-9.765,0-13.125c0-5.491,2.721-15.656,15.406-15.656c15.91,0,19.971,0,26.531,0c3.902,0,14.906-1.696,14.906-14.406 c0-13.452,0-17.89,0-24.219C82.054,11.426,81.515-0.077,55.023-0.077z M40.273,8.392c2.662,0,4.813,2.15,4.813,4.813 c0,2.661-2.151,4.813-4.813,4.813s-4.813-2.151-4.813-4.813C35.46,10.542,37.611,8.392,40.273,8.392z"/>
+            <linearGradient id="SVGID_2_" gradientUnits="userSpaceOnUse" x1="97.0444" y1="21.6321" x2="155.6665" y2="-34.5308" gradientTransform="matrix(1 0 0 -1 -53.2974 66.4321)">
+              <stop offset="0" style="stop-color:#FFE052"/>
+              <stop offset="1" style="stop-color:#FFC331"/>
+            </linearGradient>
+            <path fill="url(#SVGID_2_)" d="M55.397,109.923c25.959,0,26.282-10.271,26.282-12.156c0-3.148,0-12.594,0-12.594H54.897v-3.781 c0,0,28.032,0,37.375,0c8.009,0,17.938-4.954,17.938-26.25c0-23.322-10.538-27.281-15.656-27.281c-2.336,0-9.344,0-9.344,0 s0,10.216,0,13.125c0,5.491-2.631,15.656-15.406,15.656c-15.91,0-19.476,0-26.532,0c-3.892,0-14.906,1.896-14.906,14.406 c0,14.475,0,18.265,0,24.219C28.366,100.497,31.562,109.923,55.397,109.923z M70.148,101.454c-2.662,0-4.813-2.151-4.813-4.813 s2.15-4.813,4.813-4.813c2.661,0,4.813,2.151,4.813,4.813S72.809,101.454,70.148,101.454z"/>
+          </svg>
+          <svg class="logo-fastapi" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="52.48 49.4 346.55 64.02" aria-label="FastAPI logo" role="img">
+            <g transform="translate(52.499596,49.422425)">
+              <g transform="matrix(0.96564264,0,0,0.96251987,-899.3295,194.86874)">
+                <circle style="fill:#009688;fill-opacity:0.980392;stroke:none;stroke-width:0.141404;stop-color:#000000" cx="964.56165" cy="-169.22266" r="33.234192"/>
+                <path style="fill:#ffffff;fill-opacity:0.980392;stroke:none;stroke-width:0.146895;stop-color:#000000" d="m 962.2685,-187.40837 -6.64403,14.80375 -3.03599,6.76393 -6.64456,14.80375 30.59142,-21.56768 h -14.35312 l 20.99715,-14.80375 z"/>
+              </g>
+              <path style="font-size:79.7151px;line-height:1.25;font-family:Ubuntu;letter-spacing:0px;word-spacing:0px;fill:#009688;stroke-width:1.99288" d="M 89.523017,59.410606 V 4.1680399 H 122.84393 V 10.784393 H 97.255382 V 27.44485 h 22.718808 v 6.536638 H 97.255382 v 25.429118 z m 52.292963,-5.340912 q 2.6306,0 4.62348,-0.07972 2.07259,-0.15943 3.42774,-0.47829 V 41.155848 q -0.79715,-0.398576 -2.63059,-0.637721 -1.75374,-0.31886 -4.30462,-0.31886 -1.67402,0 -3.58718,0.239145 -1.83345,0.239145 -3.42775,1.036296 -1.51459,0.717436 -2.55088,2.072593 -1.0363,1.275442 -1.0363,3.427749 0,3.985755 2.55089,5.580058 2.55088,1.514586 6.93521,1.514586 z m -0.63772,-37.147238 q 4.46404,0 7.49322,1.195727 3.10889,1.116011 4.94233,3.268319 1.91317,2.072593 2.71032,5.022052 0.79715,2.869743 0.79715,6.377208 V 58.69317 q -0.95658,0.159431 -2.71031,0.478291 -1.67402,0.239145 -3.82633,0.478291 -2.15231,0.239145 -4.70319,0.398575 -2.47117,0.239146 -4.94234,0.239146 -3.50746,0 -6.45692,-0.717436 -2.94946,-0.717436 -5.10177,-2.232023 -2.1523,-1.594302 -3.34803,-4.145186 -1.19573,-2.550883 -1.19573,-6.138063 0,-3.427749 1.35516,-5.898917 1.43487,-2.471168 3.82632,-3.985755 2.39146,-1.514587 5.58006,-2.232023 3.18861,-0.717436 6.69607,-0.717436 1.11601,0 2.31174,0.15943 1.19572,0.07972 2.23202,0.31886 1.11601,0.159431 1.91316,0.318861 0.79715,0.15943 1.11601,0.239145 v -2.072593 q 0,-1.833447 -0.39857,-3.587179 -0.39858,-1.833448 -1.43487,-3.188604 -1.0363,-1.434872 -2.86975,-2.232023 -1.75373,-0.876866 -4.62347,-0.876866 -3.6669,0 -6.45693,0.558005 -2.71031,0.478291 -4.06547,1.036297 l -0.87686,-6.138063 q 1.43487,-0.637721 4.7829,-1.195727 3.34804,-0.637721 7.25408,-0.637721 z m 37.86462,37.147238 q 4.54377,0 6.69607,-1.195726 2.23203,-1.195727 2.23203,-3.826325 0,-2.710314 -2.15231,-4.304616 -2.15231,-1.594302 -7.09465,-3.587179 -2.39145,-0.956581 -4.62347,-1.913163 -2.15231,-1.036296 -3.74661,-2.391453 -1.5943,-1.355157 -2.55088,-3.268319 -0.95659,-1.913163 -0.95659,-4.703191 0,-5.500342 4.06547,-8.688946 4.06547,-3.26832 11.0804,-3.26832 1.75374,0 3.50747,0.239146 1.75373,0.15943 3.26832,0.47829 1.51458,0.239146 2.6306,0.558006 1.19572,0.31886 1.83344,0.558006 l -1.35515,6.377208 q -1.19573,-0.637721 -3.74661,-1.275442 -2.55089,-0.717436 -6.13807,-0.717436 -3.10889,0 -5.42062,1.275442 -2.31174,1.195727 -2.31174,3.826325 0,1.355157 0.47829,2.391453 0.55801,1.036296 1.5943,1.913163 1.11601,0.797151 2.71031,1.514587 1.59431,0.717436 3.82633,1.514587 2.94946,1.116011 5.2612,2.232022 2.31173,1.036297 3.90604,2.471169 1.67401,1.434871 2.55088,3.507464 0.87687,1.992878 0.87687,4.942337 0,5.739487 -4.30462,8.688946 -4.2249,2.949459 -12.1167,2.949459 -5.50034,0 -8.60923,-0.956582 -3.10889,-0.876866 -4.2249,-1.355156 l 1.35516,-6.377209 q 1.27544,0.478291 4.06547,1.434872 2.79003,0.956581 7.4135,0.956581 z m 32.84256,-36.110941 h 15.70387 v 6.217778 h -15.70387 v 19.131625 q 0,3.108889 0.47829,5.181481 0.47829,1.992878 1.43487,3.188604 0.95658,1.116012 2.39145,1.594302 1.43487,0.478291 3.34804,0.478291 3.34803,0 5.34091,-0.717436 2.07259,-0.797151 2.86974,-1.116011 l 1.43487,6.138063 q -1.11601,0.558005 -3.90604,1.355156 -2.79003,0.876867 -6.37721,0.876867 -4.2249,0 -7.01492,-1.036297 -2.71032,-1.116011 -4.38434,-3.268319 -1.67401,-2.152308 -2.39145,-5.261197 -0.63772,-3.188604 -0.63772,-7.333789 V 6.4000628 l 7.41351,-1.2754417 z m 62.49652,41.451853 q -1.35516,-3.587179 -2.55088,-7.014929 -1.19573,-3.507464 -2.47117,-7.094644 h -25.03054 l -5.02205,14.109573 h -8.05123 q 3.18861,-8.768661 5.97863,-16.182166 2.79003,-7.493219 5.42063,-14.189288 2.71031,-6.696069 5.34091,-12.754416 2.6306,-6.138063 5.50034,-12.1166961 h 7.09465 q 2.86974,5.9786331 5.50034,12.1166961 2.6306,6.058347 5.2612,12.754416 2.71031,6.696069 5.50034,14.189288 2.79003,7.413505 5.97863,16.182166 z m -7.25407,-20.486781 q -2.55089,-6.935214 -5.10177,-13.392137 -2.47117,-6.536639 -5.18148,-12.515272 -2.79003,5.978633 -5.34091,12.515272 -2.47117,6.456923 -4.94234,13.392137 z M 304.99242,3.6100342 q 11.6384,0 17.85618,4.4640458 6.29749,4.384331 6.29749,13.152992 0,4.782906 -1.75373,8.210656 -1.67402,3.348034 -4.94234,5.500342 -3.1886,2.072592 -7.81208,3.029174 -4.62347,0.956581 -10.44268,0.956581 h -6.13806 v 20.486781 h -7.73236 V 4.9651909 q 3.26832,-0.797151 7.25407,-1.0362963 4.06547,-0.3188604 7.41351,-0.3188604 z m 0.63772,6.7757838 q -4.94234,0 -7.57294,0.239145 v 21.682508 h 5.8192 q 3.98576,0 7.17436,-0.47829 3.18861,-0.558006 5.34092,-1.753733 2.23202,-1.275441 3.42774,-3.427749 1.19573,-2.152308 1.19573,-5.500342 0,-3.188604 -1.27544,-5.261197 -1.19573,-2.072593 -3.34803,-3.268319 -2.0726,-1.275442 -4.86263,-1.753732 -2.79002,-0.478291 -5.89891,-0.478291 z M 338.7916,4.1680399 h 7.73237 V 59.410606 h -7.73237 z"/>
+            </g>
+            <rect y="0" x="0" height="162.82199" width="451.52316" style="opacity:0.98;fill:none;fill-opacity:1;stroke-width:0.31103656"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <svg width="110" height="70" viewBox="0 0 110 70" fill="none" aria-hidden="true">
+        <defs>
+          <marker id="g2a" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" fill="#60a5fa"/>
+          </marker>
+          <marker id="g2b" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" fill="#f59e0b"/>
+          </marker>
+        </defs>
+        <line x1="6" y1="24" x2="104" y2="24" stroke="#60a5fa" stroke-width="1.6" marker-end="url(#g2a)"/>
+        <line x1="104" y1="46" x2="8" y2="46" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#g2b)"/>
+        <text x="55" y="12" font-size="10" fill="#94a3b8" text-anchor="middle">queries / events</text>
+        <text x="55" y="64" font-size="10" fill="#94a3b8" text-anchor="middle">result</text>
+      </svg>
+    </div>
+
+    <div class="externals">
+      <div class="ext-label">Sistemas externos</div>
+
+      <div class="ext-card">
+        <div class="ext-ico" style="background:#dbeafe;">
+          <svg width="20" height="20" viewBox="0 0 432.071 445.383" aria-label="PostgreSQL logo" role="img">
+            <g style="fill-rule:nonzero;clip-rule:nonzero;stroke:#000000;stroke-miterlimit:4;">
+            </g>
+            <g style="fill-rule:nonzero;clip-rule:nonzero;fill:none;stroke:#FFFFFF;stroke-width:12.4651;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;">
+              <path style="fill:#000000;stroke:#000000;stroke-width:37.3953;stroke-linecap:butt;stroke-linejoin:miter;" d="M323.205,324.227c2.833-23.601,1.984-27.062,19.563-23.239l4.463,0.392c13.517,0.615,31.199-2.174,41.587-7c22.362-10.376,35.622-27.7,13.572-23.148c-50.297,10.376-53.755-6.655-53.755-6.655c53.111-78.803,75.313-178.836,56.149-203.322    C352.514-5.534,262.036,26.049,260.522,26.869l-0.482,0.089c-9.938-2.062-21.06-3.294-33.554-3.496c-22.761-0.374-40.032,5.967-53.133,15.904c0,0-161.408-66.498-153.899,83.628c1.597,31.936,45.777,241.655,98.47,178.31    c19.259-23.163,37.871-42.748,37.871-42.748c9.242,6.14,20.307,9.272,31.912,8.147l0.897-0.765c-0.281,2.876-0.157,5.689,0.359,9.019c-13.572,15.167-9.584,17.83-36.723,23.416c-27.457,5.659-11.326,15.734-0.797,18.367c12.768,3.193,42.305,7.716,62.268-20.224    l-0.795,3.188c5.325,4.26,4.965,30.619,5.72,49.452c0.756,18.834,2.017,36.409,5.856,46.771c3.839,10.36,8.369,37.05,44.036,29.406c29.809-6.388,52.6-15.582,54.677-101.107"/>
+              <path style="fill:#336791;stroke:none;" d="M402.395,271.23c-50.302,10.376-53.76-6.655-53.76-6.655c53.111-78.808,75.313-178.843,56.153-203.326c-52.27-66.785-142.752-35.2-144.262-34.38l-0.486,0.087c-9.938-2.063-21.06-3.292-33.56-3.496c-22.761-0.373-40.026,5.967-53.127,15.902    c0,0-161.411-66.495-153.904,83.63c1.597,31.938,45.776,241.657,98.471,178.312c19.26-23.163,37.869-42.748,37.869-42.748c9.243,6.14,20.308,9.272,31.908,8.147l0.901-0.765c-0.28,2.876-0.152,5.689,0.361,9.019c-13.575,15.167-9.586,17.83-36.723,23.416    c-27.459,5.659-11.328,15.734-0.796,18.367c12.768,3.193,42.307,7.716,62.266-20.224l-0.796,3.188c5.319,4.26,9.054,27.711,8.428,48.969c-0.626,21.259-1.044,35.854,3.147,47.254c4.191,11.4,8.368,37.05,44.042,29.406c29.809-6.388,45.256-22.942,47.405-50.555    c1.525-19.631,4.976-16.729,5.194-34.28l2.768-8.309c3.192-26.611,0.507-35.196,18.872-31.203l4.463,0.392c13.517,0.615,31.208-2.174,41.591-7c22.358-10.376,35.618-27.7,13.573-23.148z"/>
+              <path d="M215.866,286.484c-1.385,49.516,0.348,99.377,5.193,111.495c4.848,12.118,15.223,35.688,50.9,28.045c29.806-6.39,40.651-18.756,45.357-46.051c3.466-20.082,10.148-75.854,11.005-87.281"/>
+              <path d="M173.104,38.256c0,0-161.521-66.016-154.012,84.109c1.597,31.938,45.779,241.664,98.473,178.316c19.256-23.166,36.671-41.335,36.671-41.335"/>
+              <path d="M260.349,26.207c-5.591,1.753,89.848-34.889,144.087,34.417c19.159,24.484-3.043,124.519-56.153,203.329"/>
+              <path style="stroke-linejoin:bevel;" d="M348.282,263.953c0,0,3.461,17.036,53.764,6.653c22.04-4.552,8.776,12.774-13.577,23.155c-18.345,8.514-59.474,10.696-60.146-1.069c-1.729-30.355,21.647-21.133,19.96-28.739c-1.525-6.85-11.979-13.573-18.894-30.338    c-6.037-14.633-82.796-126.849,21.287-110.183c3.813-0.789-27.146-99.002-124.553-100.599c-97.385-1.597-94.19,119.762-94.19,119.762"/>
+              <path d="M188.604,274.334c-13.577,15.166-9.584,17.829-36.723,23.417c-27.459,5.66-11.326,15.733-0.797,18.365c12.768,3.195,42.307,7.718,62.266-20.229c6.078-8.509-0.036-22.086-8.385-25.547c-4.034-1.671-9.428-3.765-16.361,3.994z"/>
+              <path d="M187.715,274.069c-1.368-8.917,2.93-19.528,7.536-31.942c6.922-18.626,22.893-37.255,10.117-96.339c-9.523-44.029-73.396-9.163-73.436-3.193c-0.039,5.968,2.889,30.26-1.067,58.548c-5.162,36.913,23.488,68.132,56.479,64.938"/>
+              <path style="fill:#FFFFFF;stroke-width:4.155;stroke-linecap:butt;stroke-linejoin:miter;" d="M172.517,141.7c-0.288,2.039,3.733,7.48,8.976,8.207c5.234,0.73,9.714-3.522,9.998-5.559c0.284-2.039-3.732-4.285-8.977-5.015c-5.237-0.731-9.719,0.333-9.996,2.367z"/>
+              <path style="fill:#FFFFFF;stroke-width:2.0775;stroke-linecap:butt;stroke-linejoin:miter;" d="M331.941,137.543c0.284,2.039-3.732,7.48-8.976,8.207c-5.238,0.73-9.718-3.522-10.005-5.559c-0.277-2.039,3.74-4.285,8.979-5.015c5.239-0.73,9.718,0.333,10.002,2.368z"/>
+              <path d="M350.676,123.432c0.863,15.994-3.445,26.888-3.988,43.914c-0.804,24.748,11.799,53.074-7.191,81.435"/>
+              <path style="stroke-width:3;" d="M0,60.232"/>
+            </g>
+          </svg>
+        </div>
+        <div>
+          <div class="ext-name">PostgreSQL</div>
+          <div class="ext-type">Base de datos</div>
+        </div>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-ico" style="background:#f3e8ff;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="#a855f7" stroke-width="1.8"/>
+            <circle cx="9" cy="10" r="1" fill="#a855f7"/>
+            <circle cx="15" cy="10" r="1" fill="#a855f7"/>
+            <path d="M9 15c.83 1.33 5.17 1.33 6 0" stroke="#a855f7" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="ext-name">Face Compare API</div>
+          <div class="ext-type">Servicio HTTP externo</div>
+        </div>
+      </div>
+
+      <div class="ext-card">
+        <div class="ext-ico" style="background:#fef3c7;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="ext-name">Twilio</div>
+          <div class="ext-type">SMS / WhatsApp / llamadas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

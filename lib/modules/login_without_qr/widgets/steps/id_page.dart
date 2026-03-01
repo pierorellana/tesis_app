@@ -1,4 +1,4 @@
-import 'dart:io';
+// import 'dart:io';
 import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -142,8 +142,8 @@ class _IdPageState extends State<IdPage> {
           final gapAfterCamera = (constraints.maxHeight * 0.035 * gapScale)
               .clamp(16.0, 34.0);
 
-          final previewWidth = (cardWidth * 0.58).clamp(240.0, 420.0);
-          final previewHeight = previewWidth * (cardHeight / cardWidth);
+          // final previewWidth = (cardWidth * 0.58).clamp(240.0, 420.0);
+          // final previewHeight = previewWidth * (cardHeight / cardWidth);
 
           return SingleChildScrollView(
             child: Column(
@@ -177,10 +177,10 @@ class _IdPageState extends State<IdPage> {
                           padding: EdgeInsets.all(outerPad),
                           framePadding: EdgeInsets.all(innerPad),
                         ),
-                        _buildPreviewPanel(
-                          width: previewWidth,
-                          height: previewHeight,
-                        ),
+                        // _buildPreviewPanel(
+                        //   width: previewWidth,
+                        //   height: previewHeight,
+                        // ),
                       ],
                     ),
                     SizedBox(height: gapAfterCamera),
@@ -260,6 +260,10 @@ class _IdPageState extends State<IdPage> {
   }
 
   Widget _buildWithPreview(Widget child) {
+    // Preview deshabilitado temporalmente.
+    return Center(child: child);
+
+    /*
     return LayoutBuilder(
       builder: (context, constraints) {
         final previewWidth = (constraints.maxWidth * 0.28).clamp(220.0, 360.0);
@@ -281,8 +285,10 @@ class _IdPageState extends State<IdPage> {
         );
       },
     );
+    */
   }
 
+  /*
   Widget _buildPreviewPanel({required double width, required double height}) {
     final file = _lastCapture;
     return Container(
@@ -322,4 +328,5 @@ class _IdPageState extends State<IdPage> {
       ),
     );
   }
+  */
 }

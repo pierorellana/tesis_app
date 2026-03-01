@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
+import 'package:tesis_app/modules/login_without_qr/services/call_service.dart';
+import 'package:tesis_app/modules/login_without_qr/services/create_access_service.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/succes_alerts/authorized_access.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/rejected_alerts/entry_rejected.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/informations/no_response_page.dart';
 import 'package:tesis_app/shared/widgets/status_icon_animated.dart'
     show StatusIconAnimated;
-
-enum CallSimResult { authorized, noAnswer, rejected }
 
 enum _CallUiState { calling, noResponse, authorized, rejected }
 
@@ -15,100 +15,183 @@ class ResidentCallPage extends StatefulWidget {
   const ResidentCallPage({
     super.key,
     required this.onGoNextStep,
-    this.maxAttempts = 2,
-    this.callSeconds = 10,
-    this.simulationAttempt1 = CallSimResult.noAnswer,
-    this.simulationAttempt2 = CallSimResult.authorized,
+    this.residentPhone,
+    this.accesoPk,
   });
 
   final VoidCallback onGoNextStep;
-
-  final int maxAttempts;
-  final int callSeconds;
-  final CallSimResult simulationAttempt1;
-  final CallSimResult simulationAttempt2;
+  final String? residentPhone;
+  final int? accesoPk;
 
   @override
   State<ResidentCallPage> createState() => _ResidentCallPageState();
 }
 
 class _ResidentCallPageState extends State<ResidentCallPage> {
+  final CallService _callService = CallService();
+  final AccessVisitService _accessVisitService = AccessVisitService();
   _CallUiState _uiState = _CallUiState.calling;
 
   Timer? _tick;
   Timer? _transition;
+  Timer? _pollTimer;
+  Timer? _attemptTimeout;
+  bool _polling = false;
 
-  int _attempt = 1;
   int _elapsed = 0;
+  int _attempts = 0;
+
+  static const int _maxAttempts = 2;
+  static const Duration _attemptTimeoutDuration = Duration(minutes: 2);
 
   @override
   void initState() {
     super.initState();
-    _startCallAttempt(1);
+    _startCall();
   }
 
   @override
   void dispose() {
     _tick?.cancel();
     _transition?.cancel();
+    _pollTimer?.cancel();
+    _attemptTimeout?.cancel();
     super.dispose();
   }
 
-  void _startCallAttempt(int attempt) {
+  void _startCall() {
     _tick?.cancel();
     _transition?.cancel();
+    _pollTimer?.cancel();
+    _attemptTimeout?.cancel();
+    _polling = false;
+    _attempts = (_attempts + 1).clamp(1, _maxAttempts);
 
     setState(() {
-      _attempt = attempt;
       _uiState = _CallUiState.calling;
       _elapsed = 0;
     });
 
     _tick = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
+      setState(() => _elapsed++);
+    });
 
-      if (_elapsed >= widget.callSeconds) {
-        t.cancel();
-        _finishAttempt();
-      } else {
-        setState(() => _elapsed++);
+    _attemptTimeout = Timer(_attemptTimeoutDuration, _handleAttemptTimeout);
+    _sendCallRequest();
+  }
+
+  Future<void> _sendCallRequest() async {
+    final accessPk = widget.accesoPk;
+    if (accessPk == null) {
+      return;
+    }
+
+    final payload = {
+      "visitorName": "Edinson Ramirez",
+    };
+
+    final response = await _callService.getCall(
+      context,
+      accesoPk: accessPk,
+      dataCall: payload,
+    );
+    if (!mounted) return;
+
+    if (!response.error) {
+      _startAccessVisitPolling(accessPk);
+      return;
+    }
+    _handleNoResponse();
+  }
+
+  void _startAccessVisitPolling(int accessPk) {
+    _pollTimer?.cancel();
+    _polling = true;
+
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (!_polling || !mounted) return;
+
+      final response = await _accessVisitService.getAccessVisit(
+        context,
+        accesoPk: accessPk,
+      );
+
+      if (!mounted) return;
+
+      if (response.error || response.data == null) {
+        return;
+      }
+
+      final data = response.data!;
+      if (data.finalizado == true) {
+        if (data.puedeContinuar == true) {
+          _showAuthorizedAndNext();
+        } else {
+          _showRejected();
+        }
       }
     });
   }
 
-  CallSimResult _resultForAttempt(int attempt) {
-    return attempt == 1 ? widget.simulationAttempt1 : widget.simulationAttempt2;
+  void _showAuthorizedAndNext() {
+    _polling = false;
+    _pollTimer?.cancel();
+    _attemptTimeout?.cancel();
+    _tick?.cancel();
+    setState(() => _uiState = _CallUiState.authorized);
+
+    _transition?.cancel();
+    _transition = Timer(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      widget.onGoNextStep();
+    });
   }
 
-  void _finishAttempt() {
-    final result = _resultForAttempt(_attempt);
+  void _showRejected() {
+    _polling = false;
+    _pollTimer?.cancel();
+    _attemptTimeout?.cancel();
+    _transition?.cancel();
+    _tick?.cancel();
+    setState(() => _uiState = _CallUiState.rejected);
+  }
 
+  void _handleAttemptTimeout() {
     if (!mounted) return;
+    _polling = false;
+    _pollTimer?.cancel();
+    _attemptTimeout?.cancel();
+    _tick?.cancel();
 
-    if (result == CallSimResult.authorized) {
-      setState(() => _uiState = _CallUiState.authorized);
-
-      _transition = Timer(const Duration(seconds: 5), () {
-        if (!mounted) return;
-        widget.onGoNextStep();
-      });
-      return;
-    }
-
-    if (result == CallSimResult.rejected) {
-      setState(() => _uiState = _CallUiState.rejected);
-      return;
-    }
-
-    if (_attempt < widget.maxAttempts) {
+    if (_attempts < _maxAttempts) {
       setState(() => _uiState = _CallUiState.noResponse);
-
-      _transition = Timer(const Duration(seconds: 5), () {
+      _transition?.cancel();
+      _transition = Timer(const Duration(seconds: 2), () {
         if (!mounted) return;
-        _startCallAttempt(_attempt + 1);
+        _startCall();
       });
     } else {
-      setState(() => _uiState = _CallUiState.rejected);
+      _showRejected();
+    }
+  }
+
+  void _handleNoResponse() {
+    if (!mounted) return;
+    _polling = false;
+    _pollTimer?.cancel();
+    _attemptTimeout?.cancel();
+    _tick?.cancel();
+
+    if (_attempts < _maxAttempts) {
+      setState(() => _uiState = _CallUiState.noResponse);
+      _transition?.cancel();
+      _transition = Timer(const Duration(seconds: 2), () {
+        if (!mounted) return;
+        _startCall();
+      });
+    } else {
+      _showRejected();
     }
   }
 
@@ -116,11 +199,7 @@ class _ResidentCallPageState extends State<ResidentCallPage> {
   Widget build(BuildContext context) {
     switch (_uiState) {
       case _CallUiState.calling:
-        return _CallingView(
-          attempt: _attempt,
-          maxAttempts: widget.maxAttempts,
-          elapsedSeconds: _elapsed,
-        );
+        return _CallingView(elapsedSeconds: _elapsed);
 
       case _CallUiState.noResponse:
         return const NoResponsePage();
@@ -135,14 +214,8 @@ class _ResidentCallPageState extends State<ResidentCallPage> {
 }
 
 class _CallingView extends StatelessWidget {
-  const _CallingView({
-    required this.attempt,
-    required this.maxAttempts,
-    required this.elapsedSeconds,
-  });
+  const _CallingView({required this.elapsedSeconds});
 
-  final int attempt;
-  final int maxAttempts;
   final int elapsedSeconds;
 
   String _format(int s) {
@@ -199,27 +272,15 @@ class _CallingView extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            children: [
-              Text(
-                'Intento $attempt de $maxAttempts',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.hinText,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _format(elapsedSeconds),
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.dark,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ],
+          child: Text(
+            _format(elapsedSeconds),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.dark,
+              letterSpacing: 1.0,
+            ),
           ),
         ),
       ],

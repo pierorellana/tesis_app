@@ -26,11 +26,6 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
 
   final AdmissionRequestModel _request = AdmissionRequestModel();
 
-  void _goToStep(int index) {
-    if (index == _currentStep) return;
-    setState(() => _currentStep = index);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -51,7 +46,6 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _StepsHeader(
                 currentIndex: _currentStep,
-                onTapStep: _goToStep,
               ),
             ),
             const SizedBox(height: 18),
@@ -102,9 +96,8 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
 
                   if (_currentStep == 4) {
                     return ResidentCallPage(
-                      callSeconds: 10,
-                      simulationAttempt1: CallSimResult.noAnswer,
-                      simulationAttempt2: CallSimResult.authorized,
+                      residentPhone: _request.destination?.celular,
+                      accesoPk: _request.accesoPk,
                       onGoNextStep: () => setState(() => _currentStep = 5),
                     );
                   }
@@ -131,10 +124,9 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
 }
 
 class _StepsHeader extends StatelessWidget {
-  const _StepsHeader({required this.currentIndex, required this.onTapStep});
+  const _StepsHeader({required this.currentIndex});
 
   final int currentIndex;
-  final ValueChanged<int> onTapStep;
 
   @override
   Widget build(BuildContext context) {
@@ -149,32 +141,28 @@ class _StepsHeader extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onTapStep(i),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _StepDot(
-                          index: i + 1,
-                          isActive: isActive,
-                          isCompleted: isCompleted,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _StepDot(
+                        index: i + 1,
+                        isActive: isActive,
+                        isCompleted: isCompleted,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        GlobalHelper.ingresoQrSteps[i].label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isActive
+                              ? AppTheme.primaryColor
+                              : isCompleted
+                              ? AppTheme.dark
+                              : AppTheme.hinText,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          GlobalHelper.ingresoQrSteps[i].label,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isActive
-                                ? AppTheme.primaryColor
-                                : isCompleted
-                                ? AppTheme.dark
-                                : AppTheme.hinText,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
 

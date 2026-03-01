@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1600" height="980" viewBox="0 0 1600 980" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#64748b" />
+    </marker>
+  </defs>
+
+  <style>
+    text { font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif; }
+    .title { font-size: 24px; font-weight: 700; fill: #0f172a; }
+    .subtitle { font-size: 12px; font-weight: 600; fill: #64748b; }
+    .section { font-size: 14px; font-weight: 700; fill: #0f172a; }
+    .card-title { font-size: 13px; font-weight: 700; fill: #111827; }
+    .label { font-size: 11.5px; fill: #374151; }
+    .muted { font-size: 11.5px; fill: #6b7280; }
+
+    .card { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; }
+    .accent-blue { fill: #3b82f6; }
+    .accent-green { fill: #22c55e; }
+    .accent-orange { fill: #f97316; }
+    .accent-gray { fill: #94a3b8; }
+    .accent-purple { fill: #8b5cf6; }
+    .accent-teal { fill: #06b6d4; }
+
+    .arrow { stroke: #64748b; stroke-width: 1.4; fill: none; marker-end: url(#arrow); }
+  </style>
+
+  <!-- White background -->
+  <rect width="1600" height="980" fill="#ffffff" />
+
+  <!-- Title -->
+  <text x="60" y="40" class="title">Arquitectura por Módulos - App Móvil</text>
+  <text x="60" y="60" class="subtitle">Enfoque: pantallas, widgets, servicios y shared</text>
+
+  <text x="60" y="90" class="section">Módulos (feature-based)</text>
+  <text x="820" y="90" class="section">Shared / Común</text>
+
+  <!-- Module cards column 1 -->
+  <rect x="60" y="110" width="330" height="190" rx="12" ry="12" class="card" />
+  <rect x="60" y="110" width="4" height="190" rx="2" class="accent-blue" />
+  <text x="76" y="136" class="card-title">Splash</text>
+  <text x="76" y="160" class="label">Pantallas: Splash</text>
+  <text x="76" y="180" class="label">Widgets: Animación / branding</text>
+  <text x="76" y="200" class="muted">Servicios: —</text>
+  <text x="76" y="220" class="muted">Modelos: —</text>
+
+  <rect x="60" y="330" width="330" height="190" rx="12" ry="12" class="card" />
+  <rect x="60" y="330" width="4" height="190" rx="2" class="accent-blue" />
+  <text x="76" y="356" class="card-title">Scan QR</text>
+  <text x="76" y="380" class="label">Pantallas: Scan QR</text>
+  <text x="76" y="400" class="label">Widgets: QrCodeWidget</text>
+  <text x="76" y="420" class="label">Servicios: QrService</text>
+  <text x="76" y="440" class="label">Modelos: QrResponse</text>
+
+  <!-- Module cards column 2 -->
+  <rect x="430" y="110" width="330" height="190" rx="12" ry="12" class="card" />
+  <rect x="430" y="110" width="4" height="190" rx="2" class="accent-blue" />
+  <text x="446" y="136" class="card-title">Home</text>
+  <text x="446" y="160" class="label">Pantallas: Home</text>
+  <text x="446" y="180" class="label">Widgets: Layout + tarjetas</text>
+  <text x="446" y="200" class="muted">Servicios: —</text>
+  <text x="446" y="220" class="muted">Modelos: —</text>
+
+  <rect x="430" y="330" width="330" height="190" rx="12" ry="12" class="card" />
+  <rect x="430" y="330" width="4" height="190" rx="2" class="accent-blue" />
+  <text x="446" y="356" class="card-title">Login sin QR</text>
+  <text x="446" y="380" class="label">Pantallas: Login sin QR</text>
+  <text x="446" y="400" class="label">Widgets: Formularios / pasos</text>
+  <text x="446" y="420" class="label">Servicios: Catálogo / OCR / Face</text>
+  <text x="446" y="440" class="label">Modelos: CatalogueResponse, etc.</text>
+
+  <!-- Not Found (spanning) -->
+  <rect x="60" y="550" width="700" height="150" rx="12" ry="12" class="card" />
+  <rect x="60" y="550" width="4" height="150" rx="2" class="accent-blue" />
+  <text x="76" y="576" class="card-title">Not Found</text>
+  <text x="76" y="600" class="label">Pantalla: Not Found</text>
+  <text x="76" y="620" class="label">Widgets: UI simple</text>
+  <text x="76" y="640" class="muted">Servicios: —</text>
+  <text x="76" y="660" class="muted">Modelos: —</text>
+
+  <!-- Shared big card -->
+  <rect x="820" y="110" width="720" height="260" rx="12" ry="12" class="card" />
+  <rect x="820" y="110" width="4" height="260" rx="2" class="accent-green" />
+  <text x="836" y="136" class="card-title">Shared (reutilizable entre módulos)</text>
+  <text x="836" y="160" class="label">shared/widgets: alertas, botones, layouts</text>
+  <text x="836" y="180" class="label">shared/services: HTTP Interceptor</text>
+  <text x="836" y="200" class="label">shared/providers: FunctionalProvider</text>
+  <text x="836" y="220" class="label">shared/helpers: GlobalHelper, Responsive</text>
+  <text x="836" y="240" class="label">shared/models: GeneralResponse</text>
+  <text x="836" y="260" class="label">shared/routes: AppRoutes</text>
+  <text x="836" y="280" class="label">shared/secure: CatalogueStorage</text>
+
+  <!-- Env / Theme -->
+  <rect x="820" y="400" width="350" height="150" rx="12" ry="12" class="card" />
+  <rect x="820" y="400" width="4" height="150" rx="2" class="accent-orange" />
+  <text x="836" y="426" class="card-title">Config &amp; Theme</text>
+  <text x="836" y="450" class="label">.env + Environment (DEV/QA/PROD)</text>
+  <text x="836" y="470" class="label">AppTheme</text>
+  <text x="836" y="490" class="label">Localización es-ES</text>
+
+  <!-- Device / Plugins -->
+  <rect x="1190" y="400" width="350" height="150" rx="12" ry="12" class="card" />
+  <rect x="1190" y="400" width="4" height="150" rx="2" class="accent-teal" />
+  <text x="1206" y="426" class="card-title">Dispositivo / Plugins</text>
+  <text x="1206" y="450" class="label">Camera</text>
+  <text x="1206" y="470" class="label">mobile_scanner</text>
+  <text x="1206" y="490" class="label">media_kit</text>
+  <text x="1206" y="510" class="label">flutter_secure_storage</text>
+
+  <!-- Backend / API -->
+  <rect x="820" y="590" width="720" height="180" rx="12" ry="12" class="card" />
+  <rect x="820" y="590" width="4" height="180" rx="2" class="accent-purple" />
+  <text x="836" y="616" class="card-title">Backend / API (REST/JSON)</text>
+  <text x="836" y="640" class="label">Validación QR</text>
+  <text x="836" y="660" class="label">OCR Cédula / Placa</text>
+  <text x="836" y="680" class="label">Face Compare</text>
+  <text x="836" y="700" class="label">Catálogo de viviendas</text>
+
+  <!-- Arrows -->
+  <line x1="760" y1="220" x2="820" y2="220" class="arrow" />
+  <line x1="760" y1="440" x2="820" y2="440" class="arrow" />
+  <line x1="1180" y1="370" x2="1180" y2="590" class="arrow" />
+
+  <!-- Legend -->
+  <line x1="60" y1="920" x2="90" y2="920" class="arrow" />
+  <text x="100" y="924" class="subtitle">Flujo principal (módulos → shared → backend)</text>
+</svg>

@@ -20,7 +20,7 @@ class ConfirmResident extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          'Confirme el residente',
+          'Confirme la información',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 52,
@@ -82,27 +82,27 @@ class ConfirmResident extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Divider(color: Color(0xFFD7DEE8), height: 1),
-              const SizedBox(height: 16),
-              Text(
-                'Residente',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.hinText,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                data.residentName,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.dark,
-                  height: 1.05,
-                ),
-              ),
+              // const SizedBox(height: 16),
+              // const Divider(color: Color(0xFFD7DEE8), height: 1),
+              // const SizedBox(height: 16),
+              // Text(
+              //   'Residente',
+              //   style: TextStyle(
+              //     fontSize: 12,
+              //     color: AppTheme.hinText,
+              //     fontWeight: FontWeight.w700,
+              //   ),
+              // ),
+              // const SizedBox(height: 4),
+              // Text(
+              //   data.residentName,
+              //   style: const TextStyle(
+              //     fontSize: 22,
+              //     fontWeight: FontWeight.w900,
+              //     color: AppTheme.dark,
+              //     height: 1.05,
+              //   ),
+              // ),
             ],
           ),
         ),

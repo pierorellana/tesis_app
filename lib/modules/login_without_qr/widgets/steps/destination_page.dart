@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
 import 'package:tesis_app/modules/login_without_qr/models/catalogue_response.dart';
 import 'package:tesis_app/modules/login_without_qr/models/resident_data.dart';
+import 'package:tesis_app/modules/login_without_qr/services/resident_service.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/informations/confirm_resident.dart';
 import 'package:tesis_app/shared/providers/functional_provider.dart';
 import 'package:tesis_app/shared/widgets/drop_down_button.dart';
@@ -24,6 +25,8 @@ class DestinationPage extends StatefulWidget {
 }
 
 class _DestinationPageState extends State<DestinationPage> {
+  final ResidentService _residentService = ResidentService();
+
   _DestinationUiState _uiState = _DestinationUiState.form;
 
   final _formKey = GlobalKey<FormState>();
@@ -33,10 +36,11 @@ class _DestinationPageState extends State<DestinationPage> {
 
   bool _hasErrorManzana = false;
   bool _hasErrorVilla = false;
+  bool _isSearching = false;
 
   ResidentFound? _found;
 
-  bool get _canSearch => _manzana != null && _villa != null;
+  bool get _canSearch => _manzana != null && _villa != null && !_isSearching;
 
   List<String> _manzanasFromCatalogue(List<CatalogueResponse> cat) {
     return cat.map((e) => e.manzana).toList()..sort();
@@ -51,7 +55,7 @@ class _DestinationPageState extends State<DestinationPage> {
     return villas;
   }
 
-  void _searchResident() {
+  Future<void> _searchResident() async {
     setState(() {
       _hasErrorManzana = _manzana == null;
       _hasErrorVilla = _villa == null;
@@ -59,16 +63,38 @@ class _DestinationPageState extends State<DestinationPage> {
 
     if (!_canSearch) return;
 
-    final resident = ResidentFound(
+    setState(() => _isSearching = true);
+    final response = await _residentService.getResident(
+      context,
       manzana: _manzana!,
       villa: _villa!,
-      residentName: 'Pierre Orellana',
     );
 
-    setState(() {
-      _found = resident;
-      _uiState = _DestinationUiState.confirm;
-    });
+    if (!mounted) return;
+
+    if (!response.error && response.data != null) {
+      final data = response.data!;
+      final resident = ResidentFound(
+        manzana: _manzana!,
+        villa: _villa!,
+        residentName: 'Pierre Orellana',
+        celular: data.celular,
+        viviendaPk: data.viviendaPk,
+      );
+
+      setState(() {
+        _found = resident;
+        _uiState = _DestinationUiState.confirm;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response.message)),
+      );
+    }
+
+    if (mounted) {
+      setState(() => _isSearching = false);
+    }
   }
 
   void _changeDestination() {

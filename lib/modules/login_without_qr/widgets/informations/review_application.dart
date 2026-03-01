@@ -111,7 +111,7 @@ class ReviewApplication extends StatelessWidget {
                       ),
                       _Section(
                         title: 'Destino',
-                        lines: [model.destinoLabel, model.residentName],
+                        lines: [model.destinoLabel],
                         strongFirst: true,
                         textScale: sectionScale,
                       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
 import 'package:tesis_app/modules/login_without_qr/models/admission_request.dart';
+import 'package:tesis_app/modules/login_without_qr/services/create_access_service.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/cards/card_reason.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/informations/review_application.dart';
 
@@ -25,13 +26,59 @@ class ReasonAdmissionPage extends StatefulWidget {
 }
 
 class _ReasonAdmissionPageState extends State<ReasonAdmissionPage> {
+  final CreateAccessService _accessService = CreateAccessService();
   _ReasonUiState _uiState = _ReasonUiState.select;
+  bool _isSubmitting = false;
 
-  void _selectReason(AdmissionReason reason) {
+  Future<void> _selectReason(AdmissionReason reason) async {
+    if (_isSubmitting) return;
+
     setState(() {
-      widget.model.reason = reason;
+      _isSubmitting = true;
       _uiState = _ReasonUiState.review;
     });
+
+    final viviendaPk = widget.model.destination?.viviendaPk;
+    final visitorName = widget.model.fullName;
+    final motivo = reason.label;
+
+    if (viviendaPk == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se encontró la vivienda seleccionada')),
+      );
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+      return;
+    }
+
+    final payload = {
+      "viviendaVisitaFk": viviendaPk,
+      "motivo": motivo,
+      "visitorName": visitorName,
+    };
+
+    final response = await _accessService.getAccess(
+      context,
+      dataAccess: payload,
+    );
+
+    if (!mounted) return;
+
+    if (!response.error && response.data != null) {
+      setState(() {
+        widget.model.reason = reason;
+        widget.model.accesoPk = response.data!.accesoPk;
+      });
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.message)));
+    }
+
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+    }
   }
 
   @override
