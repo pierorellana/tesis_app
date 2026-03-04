@@ -33,7 +33,7 @@ class ValidationFacePage extends StatefulWidget {
   });
 
   final VoidCallback onBack;
-  final VoidCallback onSuccessNext;
+  final ValueChanged<String> onSuccessNext;
   final String fotoCedulaBase64;
 
   @override
@@ -68,6 +68,7 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
   Uint8List? _snapshotCache;
   DateTime _snapshotCacheAt = DateTime.fromMillisecondsSinceEpoch(0);
   Uint8List? _lastFaceFrame;
+  String? _lastFaceBase64;
   Uint8List? _cedulaPreviewBytes;
   DateTime _lastPreviewUpdate = DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -411,9 +412,12 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
       setState(() => _lastFaceFrame = facePng ?? facePayload);
     }
 
+    final liveFaceBase64 = base64Encode(facePng ?? facePayload);
+    _lastFaceBase64 = liveFaceBase64;
+
     final payload = {
       'foto_cedula_base64': widget.fotoCedulaBase64,
-      'foto_rostro_vivo_base64': base64Encode(facePng ?? facePayload),
+      'foto_rostro_vivo_base64': liveFaceBase64,
     };
 
     final response = await _faceService.getFace(context, payload: payload);
@@ -423,7 +427,7 @@ class _ValidationFacePageState extends State<ValidationFacePage> {
     if (!response.error && response.data?.match == true) {
       setState(() => _uiState = _FaceUiState.success);
       Future.delayed(const Duration(milliseconds: 900), () {
-        if (mounted) widget.onSuccessNext();
+        if (mounted) widget.onSuccessNext(_lastFaceBase64 ?? liveFaceBase64);
       });
     } else {
       setState(() => _uiState = _FaceUiState.rejected);

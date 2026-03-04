@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:tesis_app/env/theme/app_theme.dart';
 import 'package:tesis_app/modules/login_without_qr/models/plate_response.dart';
 import 'package:tesis_app/modules/login_without_qr/services/ocr_plate_service.dart';
+import 'package:tesis_app/modules/login_without_qr/services/update_plate.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/cards/hikvision_camera_widget.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/cards/hikvision_plate_camera_widget.dart';
 import 'package:tesis_app/modules/login_without_qr/widgets/loadings/reading_plate_widget.dart';
@@ -19,10 +20,12 @@ class CapturePlate extends StatefulWidget {
     super.key,
     required this.onBack,
     required this.onFinishGoHome,
+    required this.accesoPk,
   });
 
   final VoidCallback onBack;
   final VoidCallback onFinishGoHome;
+  final int? accesoPk;
 
   @override
   State<CapturePlate> createState() => _CapturePlateState();
@@ -33,6 +36,7 @@ class _CapturePlateState extends State<CapturePlate> {
   late final HikvisionCameraConfig _hikConfig;
 
   final OcrPlateService _plateService = OcrPlateService();
+  final UpdatePlateService _updatePlateService = UpdatePlateService();
 
   _PlateUiState _uiState = _PlateUiState.camera;
 
@@ -61,8 +65,12 @@ class _CapturePlateState extends State<CapturePlate> {
 
     if (!mounted) return;
 
-    final detected =
-        plateResp != null ? plateResp.placa.trim() : '';
+    final detected = plateResp != null ? plateResp.placa.trim() : '';
+
+    if (detected.isNotEmpty) {
+      await _updatePlate(detected);
+      if (!mounted) return;
+    }
 
     setState(() {
       _plate = detected.isNotEmpty ? detected : 'ABC-0123';
@@ -79,23 +87,63 @@ class _CapturePlateState extends State<CapturePlate> {
     return null;
   }
 
+  Future<void> _updatePlate(String plate) async {
+    final accesoPk = widget.accesoPk;
+    if (accesoPk == null) return;
+
+    final payload = {
+      "placa": plate,
+      "usuarioActualizado": "system",
+    };
+
+    final response = await _updatePlateService.updatePlate(
+      context,
+      accesoPk: accesoPk,
+      dataPlate: payload,
+    );
+
+    if (!mounted) return;
+    if (response.error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response.message)),
+      );
+    }
+  }
+
   HikvisionCameraConfig _buildConfigFromEnv() {
-    final rtsp = dotenv.env['HIKVISION_FACE_RTSP_URL'];
-    final snapshot = dotenv.env['HIKVISION_FACE_SNAPSHOT_URL'];
-    final user = dotenv.env['HIKVISION_FACE_USER'];
-    final pass = dotenv.env['HIKVISION_FACE_PASS'];
+    String? pick(List<String?> values) {
+      for (final value in values) {
+        if (value != null && value.trim().isNotEmpty) return value;
+      }
+      return null;
+    }
+
+    final rtsp = pick([
+      dotenv.env['HIKVISION_PLATE_RTSP_URL'],
+      dotenv.env['HIKVISION_FACE_RTSP_URL'],
+      dotenv.env['HIKVISION_RTSP_URL'],
+    ]);
+    final snapshot = pick([
+      dotenv.env['HIKVISION_PLATE_SNAPSHOT_URL'],
+      dotenv.env['HIKVISION_FACE_SNAPSHOT_URL'],
+      dotenv.env['HIKVISION_SNAPSHOT_URL'],
+    ]);
+    final user = pick([
+      dotenv.env['HIKVISION_PLATE_USER'],
+      dotenv.env['HIKVISION_FACE_USER'],
+      dotenv.env['HIKVISION_USER'],
+    ]);
+    final pass = pick([
+      dotenv.env['HIKVISION_PLATE_PASS'],
+      dotenv.env['HIKVISION_FACE_PASS'],
+      dotenv.env['HIKVISION_PASS'],
+    ]);
 
     return HikvisionCameraConfig(
-      rtspUrl: (rtsp != null && rtsp.isNotEmpty)
-          ? rtsp
-          : (dotenv.env['HIKVISION_RTSP_URL'] ?? ''),
-      snapshotUrl: (snapshot != null && snapshot.isNotEmpty)
-          ? snapshot
-          : dotenv.env['HIKVISION_SNAPSHOT_URL'],
-      username:
-          (user != null && user.isNotEmpty) ? user : dotenv.env['HIKVISION_USER'],
-      password:
-          (pass != null && pass.isNotEmpty) ? pass : dotenv.env['HIKVISION_PASS'],
+      rtspUrl: rtsp ?? '',
+      snapshotUrl: snapshot,
+      username: user,
+      password: pass,
     );
   }
 

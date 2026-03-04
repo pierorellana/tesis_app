@@ -21,6 +21,7 @@ class AdmissionRequestModel {
   ResidentFound? destination;
   AdmissionReason? reason;
   int? accesoPk;
+  String? fotoRostroVivoBase64;
 
   String get fullName {
     final d = idData;

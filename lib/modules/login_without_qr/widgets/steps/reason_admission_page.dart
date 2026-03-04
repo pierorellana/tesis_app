@@ -41,6 +41,7 @@ class _ReasonAdmissionPageState extends State<ReasonAdmissionPage> {
     final viviendaPk = widget.model.destination?.viviendaPk;
     final visitorName = widget.model.fullName;
     final motivo = reason.label;
+    final fotoRostroVivoBase64 = widget.model.fotoRostroVivoBase64;
 
     if (viviendaPk == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,6 +57,7 @@ class _ReasonAdmissionPageState extends State<ReasonAdmissionPage> {
       "viviendaVisitaFk": viviendaPk,
       "motivo": motivo,
       "visitorName": visitorName,
+      "fotoRostroVivoBase64": fotoRostroVivoBase64,
     };
 
     final response = await _accessService.getAccess(

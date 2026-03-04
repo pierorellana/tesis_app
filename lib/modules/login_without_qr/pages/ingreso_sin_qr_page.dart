@@ -44,9 +44,7 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
             const SizedBox(height: 18),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _StepsHeader(
-                currentIndex: _currentStep,
-              ),
+              child: _StepsHeader(currentIndex: _currentStep),
             ),
             const SizedBox(height: 18),
             Expanded(
@@ -71,7 +69,10 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
                     return ValidationFacePage(
                       onBack: () => setState(() => _currentStep = 0),
                       fotoCedulaBase64: _fotoCedulaBase64 ?? '',
-                      onSuccessNext: () => setState(() => _currentStep = 2),
+                      onSuccessNext: (fotoRostroVivoBase64) {
+                        _request.fotoRostroVivoBase64 = fotoRostroVivoBase64;
+                        setState(() => _currentStep = 2);
+                      },
                     );
                   }
 
@@ -110,6 +111,7 @@ class _IngresoQrFlowPageState extends State<IngresoQrFlowPage> {
                           GlobalHelper.EntryMethodItem.none,
                         );
                       },
+                      accesoPk: _request.accesoPk,
                     );
                   }
                   return const SizedBox.shrink();
@@ -165,7 +167,6 @@ class _StepsHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-
                 if (i != GlobalHelper.ingresoQrSteps.length - 1)
                   _Connector(isCompleted: i < currentIndex),
               ],
