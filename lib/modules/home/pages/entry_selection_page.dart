@@ -39,6 +39,10 @@ class _EntrySelectionPageState extends State<EntrySelectionPage> {
             final iconBox = (r.dp(4.2)).clamp(52.0, 72.0);
             final iconSize = (r.dp(2.2)).clamp(28.0, 36.0);
 
+            final guardIconBox = (r.dp(3.0)).clamp(44.0, 60.0);
+            final guardIconSize = (r.dp(1.6)).clamp(22.0, 30.0);
+            final guardPadding = (r.dp(0.7)).clamp(6.0, 12.0);
+
             final titleSize = (r.dp(2.6)).clamp(30.0, 50.0);
             final subtitleSize = (r.dp(1.3)).clamp(14.0, 22.0);
 
@@ -59,97 +63,129 @@ class _EntrySelectionPageState extends State<EntrySelectionPage> {
               24.0,
             );
 
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                  minWidth: constraints.maxWidth,
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: paddingV),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                      minWidth: constraints.maxWidth,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: paddingV),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            width: iconBox,
-                            height: iconBox,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Icon(
-                              Symbols.home_filled_rounded,
-                              color: Colors.white,
-                              size: iconSize,
-                            ),
+                          Column(
+                            children: [
+                              Container(
+                                width: iconBox,
+                                height: iconBox,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(
+                                  Symbols.home_filled_rounded,
+                                  color: Colors.white,
+                                  size: iconSize,
+                                ),
+                              ),
+                              SizedBox(height: gapTitle),
+                              Text(
+                                'Bienvenido(a)',
+                                style: TextStyle(
+                                  fontSize: titleSize,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.dark,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Seleccione su método de ingreso',
+                                style: TextStyle(
+                                  fontSize: subtitleSize,
+                                  color: AppTheme.hinText,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(height: gapCards),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: wrapSpacing,
+                                runSpacing: wrapRunSpacing,
+                                children: [
+                                  OptionCard(
+                                    icon: Symbols.qr_code_2_rounded,
+                                    title: 'Escanear QR',
+                                    subtitle: 'Use su código QR',
+                                    width: cardWidth,
+                                    height: cardHeight,
+                                    iconSize: cardIconSize,
+                                    titleSize: cardTitleSize,
+                                    subtitleSize: cardSubtitleSize,
+                                    onTap: () => fp.setEntryMethodItem(
+                                      EntryMethodItem.scanQr,
+                                    ),
+                                  ),
+                                  OptionCard(
+                                    icon: Icons.badge_outlined,
+                                    title: 'Ingreso sin QR',
+                                    subtitle: 'Identifíquese manualmente',
+                                    width: cardWidth,
+                                    height: cardHeight,
+                                    iconSize: cardIconSize,
+                                    titleSize: cardTitleSize,
+                                    subtitleSize: cardSubtitleSize,
+                                    onTap: () => fp.setEntryMethodItem(
+                                      EntryMethodItem.noQr,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          SizedBox(height: gapTitle),
                           Text(
-                            'Bienvenido(a)',
+                            'Para asistencia, contacte al personal de seguridad.',
                             style: TextStyle(
-                              fontSize: titleSize,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.dark,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Seleccione su método de ingreso',
-                            style: TextStyle(
-                              fontSize: subtitleSize,
+                              fontSize: (r.dp(1.0)).clamp(12.0, 16.0),
                               color: AppTheme.hinText,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          SizedBox(height: gapCards),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: wrapSpacing,
-                            runSpacing: wrapRunSpacing,
-                            children: [
-                              OptionCard(
-                                icon: Symbols.qr_code_2_rounded,
-                                title: 'Escanear QR',
-                                subtitle: 'Use su código QR',
-                                width: cardWidth,
-                                height: cardHeight,
-                                iconSize: cardIconSize,
-                                titleSize: cardTitleSize,
-                                subtitleSize: cardSubtitleSize,
-                                onTap: () => fp.setEntryMethodItem(
-                                  EntryMethodItem.scanQr,
-                                ),
-                              ),
-                              OptionCard(
-                                icon: Icons.badge_outlined,
-                                title: 'Ingreso sin QR',
-                                subtitle: 'Identifíquese manualmente',
-                                width: cardWidth,
-                                height: cardHeight,
-                                iconSize: cardIconSize,
-                                titleSize: cardTitleSize,
-                                subtitleSize: cardSubtitleSize,
-                                onTap: () =>
-                                    fp.setEntryMethodItem(EntryMethodItem.noQr),
-                              ),
-                            ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: EdgeInsets.all(guardPadding),
+                    child: Container(
+                      width: guardIconBox,
+                      height: guardIconBox,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
                           ),
                         ],
                       ),
-                      Text(
-                        'Para asistencia, contacte al personal de seguridad.',
-                        style: TextStyle(
-                          fontSize: (r.dp(1.0)).clamp(12.0, 16.0),
-                          color: AppTheme.hinText,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: Icon(
+                        Symbols.security_rounded,
+                        color: Colors.white,
+                        size: guardIconSize,
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             );
           },
         ),
